@@ -1,0 +1,332 @@
+<div wire:ignore.self id="addAuditModalComponent" class="modal fade" tabindex="-1"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered mw-1000px">
+        <div class="modal-content">
+            <div class="modal-header" id="kt_modal_add_audit_header">
+                <h2 class="fw-bold">Add Audit Plan</h2>
+                <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal" aria-label="Close">
+                    {!! getIcon('cross', 'fs-1') !!}
+                </div>
+            </div>
+            <div class="modal-body px-5 my-7">
+                <div class="stepper stepper-pills" id="kt_modal_add_audit_stepper">
+                    <div class="stepper-nav flex-center flex-wrap mb-10">
+                        @for ($i = 1; $i <= 8; $i++)
+                            <div class="stepper-item mx-2 my-4 @if ($i == 1) current @endif"
+                                data-kt-stepper-element="nav">
+                                <div class="stepper-wrapper d-flex align-items-center">
+                                    <div class="stepper-icon w-40px h-40px">
+                                        <i class="stepper-check fas fa-check"></i>
+                                        <span class="stepper-number">{{ $i }}</span>
+                                    </div>
+                                    <div class="stepper-label">
+                                        <h3 class="stepper-title">Step {{ $i }}</h3>
+                                        <div class="stepper-desc">Step {{ $i }} Description</div>
+                                    </div>
+                                </div>
+                                @if ($i < 8)
+                                    <div class="stepper-line h-40px"></div>
+                                @endif
+                            </div>
+                        @endfor
+                    </div>
+                    <form class="form w-lg-900px mx-auto" wire:submit.prevent="submit">
+                        @for ($i = 1; $i <= 8; $i++)
+                            <div class="flex-column js-step @if ($i == 1) current @endif"
+                                data-step="{{ $i }}" data-kt-stepper-element="content">
+                                <div class="d-flex flex-column scroll-y px-5 px-lg-10" id="kt_modal_add_audit_scroll"
+                                    data-kt-scroll="true" data-kt-scroll-activate="true"
+                                    data-kt-scroll-max-height="auto"
+                                    data-kt-scroll-dependencies="#kt_modal_add_audit_header"
+                                    data-kt-scroll-wrappers="#kt_modal_add_audit_scroll" data-kt-scroll-offset="300px">
+                                    @if ($i == 1)
+                                        @include('livewire.audit.steps.step1')
+                                    @elseif ($i == 2)
+                                        @include('livewire.audit.steps.step2')
+                                    @elseif ($i == 3)
+                                        @include('livewire.audit.steps.step3')
+                                    @elseif ($i == 4)
+                                        @include('livewire.audit.steps.step4')
+                                    @elseif ($i == 5)
+                                        @include('livewire.audit.steps.step5')
+                                    @elseif ($i == 6)
+                                        @include('livewire.audit.steps.step6')
+                                    @elseif ($i == 7)
+                                        @include('livewire.audit.steps.step7')
+                                    @endif
+                                </div>
+                            </div>
+                        @endfor
+                        <div class="d-flex flex-stack pt-10">
+                            <div class="mr-2">
+                                <button type="button" class="btn btn-lg btn-light-primary me-3"
+                                    data-kt-stepper-action="previous">
+                                    <i class="ki-duotone ki-arrow-left fs-4 me-1">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                    </i>Previous
+                                </button>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-lg btn-primary" wire:click="$emit('nextStep')"
+                                    data-kt-stepper-action="next">
+                                    <span class="indicator-label">Next</span>
+                                    <span class="indicator-progress">Please wait...
+                                        <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                                </button>
+                                <button type="submit" class="btn btn-lg btn-primary" data-kt-stepper-action="submit">
+                                    <span class="indicator-label">Submit</span>
+                                    <span class="indicator-progress">Please wait...
+                                        <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@push('scripts')
+    <script>
+        let the = {
+            element: null,
+            stepper: null,
+            currentStepIndex: 0,
+            modalElement: null
+        };
+        document.addEventListener('livewire:load', function() {
+    let stepperInstances = {};
+    let currentStepIndices = {};
+
+    Livewire.hook('message.processed', (message, component) => {
+        if (component.name === 'add-audit-modal-component') {
+            const modalElement = document.getElementById('addAuditModalComponent');
+            if (modalElement && modalElement.classList.contains('show')) {
+                const stepperElement = modalElement.querySelector("#kt_modal_add_audit_stepper");
+                if (stepperElement) {
+                  // Ensure stepper is initialized or re-initialized
+                    setTimeout(() => {
+                        initializeStepper(modalElement, stepperElement);
+                    }, 0);
+                } else {
+                    console.error("Stepper element not found after Livewire update.");
+                }
+            }
+        }
+    });
+
+    function initializeStepper(modalElement, stepperElement) {
+        const modalId = modalElement.id;
+
+        if (!stepperInstances[modalId]) {
+            stepperInstances[modalId] = new KTStepper(stepperElement);
+            currentStepIndices[modalId] = 0;
+
+            stepperInstances[modalId].on("kt.stepper.next", function(stepperObj) {
+                const currentStep = currentStepIndices[modalId] + 1;
+                Livewire.emit('validateStep', currentStep, (isValid) => {
+                    if (!isValid) {
+                        stepperObj.goPrevious(); // Prevent next step
+                        return; // Very Important: Stop further execution in this callback
+                    }
+                    currentStepIndices[modalId]++;
+                    // IMPORTANT: Use setTimeout to ensure the DOM has updated before goTo
+                    setTimeout(() => {
+                        stepperObj.goTo(currentStep + 1);
+                    }, 0);
+                    Livewire.emit('nextStep');
+                });
+            });
+
+            stepperInstances[modalId].on("kt.stepper.previous", function() {
+                currentStepIndices[modalId]--;
+                stepperInstances[modalId].goTo(currentStepIndices[modalId] + 1);
+                Livewire.emit('previousStep');
+            });
+        } else {
+          // If already initialized, just go to the correct step
+            stepperInstances[modalId].goTo(currentStepIndices[modalId] + 1);
+        }
+    }
+
+    document.addEventListener('shown.bs.modal', function(event) {
+        const modalElement = document.getElementById('addAuditModalComponent');
+        if (modalElement) {
+            const stepperElement = modalElement.querySelector("#kt_modal_add_audit_stepper");
+            if (stepperElement) {
+                initializeStepper(modalElement, stepperElement);
+            } else {
+                console.error("Stepper element not found on modal shown.");
+            }
+        } else {
+            console.error("Modal element not found on modal shown.");
+        }
+    });
+
+    document.addEventListener('hidden.bs.modal', function(event) {
+        const modalElement = document.getElementById('addAuditModalComponent');
+        if(modalElement){
+            const modalId = modalElement.id;
+            if (stepperInstances[modalId]) {
+                stepperInstances[modalId].destroy();
+                delete stepperInstances[modalId];
+                delete currentStepIndices[modalId];
+            }
+        }
+    });
+});
+        // document.addEventListener('livewire:load', function() {
+        //     the.modalElement = document.getElementById('addAuditModalComponent');
+        //     if (the.modalElement) {
+        //         the.modalElement.addEventListener('shown.bs.modal', function(event) {
+
+        //             if (!the.modalElement.dataset.stepperInitialized) {
+        //                 the.element = the.modalElement.querySelector("#kt_modal_add_audit_stepper");
+        //                 if (the.element) {
+        //                     the.stepper = new KTStepper(the.element);
+        //                     the.modalElement.dataset.stepperInitialized = true;
+
+        //                     Livewire.on('stepChanged', step => {
+        //                         the.currentStepIndex = step;
+        //                         the.stepper.goTo(step);
+        //                     });
+
+        //                     Livewire.on('formSubmitted', () => {
+        //                         const modalInstance = bootstrap.Modal.getInstance(the.modalElement);
+        //                         if (modalInstance) {
+        //                             modalInstance.hide();
+        //                         }
+        //                         the.stepper.goTo(1);
+        //                         the.currentStepIndex = 0;
+        //                     });
+
+        //                     the.stepper.on("kt.stepper.next", function() {
+        //                         the.currentStepIndex++;
+        //                         Livewire.emit('nextStep');
+        //                     });
+
+        //                     the.stepper.on("kt.stepper.previous", function() {
+        //                         the.currentStepIndex--;
+        //                         Livewire.emit('previousStep');
+        //                     });
+        //                 }
+        //             }
+        //         });
+        //     }
+        //     Livewire.hook('message.processed', (message, component) => {
+        //         if (the.element && component.el.contains(the.element)) {
+        //             if (the.stepper) {
+        //                 the.stepper.goTo(the.currentStepIndex);
+        //             }
+        //         }
+        //     });
+        // });
+        document.addEventListener('livewire:load', function() {
+            let flatpickrInstances = {}; // Store instances by modal ID
+
+            Livewire.hook('message.processed', (message, component) => {
+                if (component.name === 'audit.add-audit-modal') {
+                    const modalElement = document.getElementById('addAuditModalComponent');
+                    if (modalElement && modalElement.classList.contains('show')) {
+                        initializeFlatpickr(modalElement);
+                    }
+                }
+            });
+
+            function initializeFlatpickr(modalElement) {
+                const modalId = modalElement.id; // Use modal ID for instance storage
+                const dateInput = modalElement.querySelector('#a_date_range');
+
+                if (!dateInput) {
+                    console.error('Date input #a_date_range not found in modal', modalId);
+                    return; // Important: Exit if input not found
+                }
+
+                if (!flatpickrInstances[modalId]) {
+                    flatpickrInstances[modalId] = flatpickr(dateInput, {
+                        mode: "range",
+                        dateFormat: "Y-m-d",
+                        altInput: true,
+                        altFormat: "F j, Y",
+                    });
+                    modalElement.dataset.flatpickrInitialized = true;
+                } else {
+                    flatpickrInstances[modalId].destroy();
+                    flatpickrInstances[modalId] = flatpickr(dateInput, {
+                        mode: "range",
+                        dateFormat: "Y-m-d",
+                        altInput: true,
+                        altFormat: "F j, Y",
+                    });
+                }
+            }
+
+            const modalElement = document.getElementById('addAuditModalComponent');
+            if (modalElement) {
+                modalElement.addEventListener('shown.bs.modal', function() {
+                    initializeFlatpickr(modalElement);
+                });
+                modalElement.addEventListener('hidden.bs.modal', function() {
+                    const modalId = modalElement.id;
+                    if (flatpickrInstances[modalId]) {
+                        flatpickrInstances[modalId].destroy();
+                        delete flatpickrInstances[modalId];
+                        modalElement.dataset.flatpickrInitialized = false;
+                    }
+                });
+            }
+        });
+        // document.addEventListener('livewire:load', function() {
+        //     console.log('here livewire');
+        //     const modalElement = document.getElementById('addAuditModalComponent');
+        //     if (modalElement) {
+        //         modalElement.addEventListener('shown.bs.modal', function() {
+        //             console.log('here modal');
+        //             let fp;
+        //             if (!modalElement.dataset.flatpickrInitialized) {
+        //                 console.log('here not initialized');
+        //                 const dateInput = modalElement.querySelector('#a_date_range');
+        //                 if (dateInput) {
+                            
+        //                     console.log('here dateinput');
+        //                     fp = flatpickr(dateInput, {
+        //                         mode: "range",
+        //                         dateFormat: "Y-m-d",
+        //                         altInput: true,
+        //                         altFormat: "F j, Y",
+        //                     });
+        //                     modalElement.dataset.flatpickrInitialized = true;
+        //                 } else {
+        //                     console.error('Date input not found')
+        //                 }
+        //             } else if (modalElement.flatpickrInstance) { // Check for existing instance
+        //                 modalElement.flatpickrInstance.destroy(); // Destroy if validation fails
+        //                 modalElement.flatpickrInstance = null;
+        //                 modalElement.dataset.flatpickrInitialized = false;
+        //                 initializeFlatpickr(modalElement); // Re-initialize after destruction
+        //             }
+        //             Livewire.on('flatpickrUpdated', () => {
+                        
+        //                 console.log('here updatedEvent');
+        //                 if (fp) {
+        //                     fp.destroy();
+                            
+        //                 }
+        //                 const dateInput = modalElement.querySelector('#a_date_range');
+        //                 if (dateInput) {
+        //                     fp = flatpickr(dateInput, {
+        //                         mode: "range",
+        //                         dateFormat: "Y-m-d",
+        //                         altInput: true,
+        //                         altFormat: "F j, Y",
+        //                     });
+        //                 } else {
+        //                     console.error('Date input not found')
+        //                 }
+        //             });
+        //         });
+        //     }
+        // });
+    </script>
+@endpush
