@@ -102,18 +102,14 @@
             </select>
         </div>
         <div class="col-md-3">
-            <label for="employer_region" class="form-label fw-semibold">Barangay</label>
+            <label for="address_barangay" class="form-label fw-semibold">Barangay</label>
             <select wire:model="address_barangay" class="form-select">
                 <option value="" selected disabled>Barangay</option>
                 @foreach($address_barangays as $barangay)
-                    <option value="{{ $barangay->psgc_code }}">{{ $barangay->name }}</option>
+                    <option value="{{ $barangay->code }}">{{ $barangay->name }}</option>
                 @endforeach
             </select>
         </div>
-    </div>
-
-    <div class="row mt-3">
-       
     </div>
 
     <!-- Place of Birth Section -->
@@ -123,7 +119,7 @@
         </div>
         <div class="col-md-10">
             <div class="form-check">
-                <input type="checkbox" wire:model.defer="same_as_address" class="form-check-input" id="sameAddressCheckbox" wire:click="toggleSameAsAddress">
+                <input type="checkbox" wire:model="same_as_address" class="form-check-input" id="sameAddressCheckbox">
                 <label class="form-check-label" for="sameAddressCheckbox">Same as Current Address</label>
             </div>
         </div>
@@ -131,7 +127,7 @@
     <div class="row mb-2">
         <div class="col-md-3">
             <label for="birth_region" class="form-label fw-semibold">Region</label>
-            <select wire:model="birth_region" class="form-select">
+            <select wire:model="birth_region" class="form-select" {{ $same_as_address ? 'disabled' : '' }}>
                 <option value="" selected disabled>Region</option>
                 @foreach($birth_regions as $region)
                     <option value="{{ $region->region_code }}">{{ $region->name }}</option>
@@ -140,7 +136,7 @@
         </div>
         <div class="col-md-3">
             <label for="birth_province" class="form-label fw-semibold">Province</label>
-            <select wire:model="birth_province" class="form-select">
+            <select wire:model="birth_province" class="form-select" {{ $same_as_address ? 'disabled' : '' }}>
                 <option value="" selected disabled>Province</option>
                 @foreach($birth_provinces as $province)
                     <option value="{{ $province->province_code }}">{{ $province->name }}</option>
@@ -149,7 +145,7 @@
         </div>
         <div class="col-md-3">
             <label for="birth_city" class="form-label fw-semibold">City/Municipality</label>
-            <select wire:model="birth_city" class="form-select">
+            <select wire:model="birth_city" class="form-select" {{ $same_as_address ? 'disabled' : '' }}>
                 <option value="" selected disabled>City/Municipality</option>
                 @foreach($birth_cities as $city)
                     <option value="{{ $city->city_code }}">{{ $city->name }}</option>
@@ -157,11 +153,11 @@
             </select>
         </div>
         <div class="col-md-3">
-            <label for="employer_region" class="form-label fw-semibold">Barangay</label>
-            <select wire:model="birth_barangay" class="form-select">
+            <label for="birth_barangay" class="form-label fw-semibold">Barangay</label>
+            <select wire:model="birth_barangay" class="form-select" {{ $same_as_address ? 'disabled' : '' }}>
                 <option value="" selected disabled>Barangay</option>
                 @foreach($birth_barangays as $barangay)
-                    <option value="{{ $barangay->psgc_code }}">{{ $barangay->name }}</option>
+                    <option value="{{ $barangay->code }}">{{ $barangay->name }}</option>
                 @endforeach
             </select>
         </div>
