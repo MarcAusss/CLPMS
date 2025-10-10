@@ -1,48 +1,178 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Audit;
 use App\Models\AuditExecution;
 use App\DataTables\ScheduleAuditsDataTable;
+use App\DataTables\AuditsDataTable; // You'll need this for CL profiling
 use Illuminate\Support\Facades\Log;
 use App\Models\AuditEngagementPlan;
 use App\Models\ChildLaborer;
+use App\Models\Province;
+use App\Models\Barangay;
 use Illuminate\Http\Request;
+use Yajra\DataTables\DataTables;
 
 class AuditController extends Controller
 {
+    /**
+     * Display CL Profiling main page with DataTable
+     */
+    public function index(AuditsDataTable $dataTable)
+    {
+        return $dataTable->render('pages.apps.audit-management.audits.index');
+    }
+
+    /**
+     * DataTable server-side processing for CL Profiling
+     */
+    public function dataTable(Request $request)
+    {
+        $childLaborers = ChildLaborer::with(['barangay.province'])
+            ->select('child_laborers.*');
+
+        return DataTables::of($childLaborers)
+            ->addColumn('full_name', function (ChildLaborer $cl) {
+                return $cl->last_name . ', ' . $cl->first_name . ' ' . $cl->middle_name;
+            })
+            ->addColumn('birth_date', function (ChildLaborer $cl) {
+                return $cl->date_of_birth ? \Carbon\Carbon::parse($cl->date_of_birth)->format('M j, Y') : '';
+            })
+            ->addColumn('province', function (ChildLaborer $cl) {
+                return $cl->barangay->province->name ?? 'N/A';
+            })
+            ->addColumn('status', function (ChildLaborer $cl) {
+                return $cl->status ?? 'Active';
+            })
+            ->addColumn('action', function (ChildLaborer $cl) {
+                return view('pages.apps.audit-management.audits.columns._actions', compact('cl'))->render();
+            })
+            ->filterColumn('full_name', function($query, $keyword) {
+                $query->whereRaw("CONCAT(last_name, ', ', first_name, ' ', middle_name) like ?", ["%{$keyword}%"]);
+            })
+            ->rawColumns(['action'])
+            ->make(true);
+    }
+
+    /**
+     * Show single CL record for quick view modal (API)
+     */
+    public function show($id)
+    {
+        $childLaborer = ChildLaborer::with([
+            'barangay.province',
+            'education',
+            'health', 
+            'work',
+            'requested_services',
+            'availed_services',
+            'family_members'
+        ])->findOrFail($id);
+        
+        return response()->json($childLaborer);
+    }
+
+    /**
+     * Get CL record for editing
+     */
+    public function editCl($id)
+    {
+        $childLaborer = ChildLaborer::with(['barangay.province'])->findOrFail($id);
+        return response()->json($childLaborer);
+    }
+
+    /**
+     * Update CL record (API)
+     */
+    public function updateCl(Request $request, $id)
+    {
+        $childLaborer = ChildLaborer::findOrFail($id);
+        
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'sex' => 'required|in:Male,Female',
+            'date_of_birth' => 'required|date',
+            'age' => 'required|integer|min:0',
+            'barangay_id' => 'required|exists:barangays,id',
+            'contact_number' => 'nullable|string|max:20',
+            'guardian_name' => 'nullable|string|max:255',
+            'address' => 'nullable|string',
+            'education_level' => 'nullable|string|max:255',
+            'work_type' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+            'status' => 'required|in:Active,Inactive,Pending'
+        ]);
+
+        $childLaborer->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'CL record updated successfully'
+        ]);
+    }
+
+    /**
+     * Delete CL record (API)
+     */
+    public function destroyCl($id)
+    {
+        $childLaborer = ChildLaborer::findOrFail($id);
+        $childLaborer->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'CL record deleted successfully'
+        ]);
+    }
+
+    /**
+     * Get provinces for dropdown (API)
+     */
+    public function getProvinces()
+    {
+        $provinces = Province::orderBy('name')->get();
+        return response()->json($provinces);
+    }
+
+    /**
+     * Get barangays by province (API)
+     */
+    public function getBarangaysByProvince(Request $request)
+    {
+        $barangays = Barangay::where('province_id', $request->province_id)
+            ->orderBy('name')
+            ->get();
+        return response()->json($barangays);
+    }
+
+    // Your existing methods below...
     public function edit($id)
     {
         $audit = Audit::findOrFail($id);
         return view('pages.apps.audit-management.audits.action-pages.edit', compact('audit'));
     }
 
-    // Evaluate audit
     public function evaluate($id)
-{
-    $audit = Audit::with([
-        'auditScopes',
-        'auditObjectives',
-        'auditMethods',
-        'auditCriteria',
-        'auditResourceReferences',
-        'auditEngagementPlans',
-        'auditEngagementPlans.specifics',
-        'auditBudgets',
-        'auditEquipments',
-        'auditTeams'
-    ])->findOrFail($id);
+    {
+        $audit = Audit::with([
+            'auditScopes',
+            'auditObjectives',
+            'auditMethods',
+            'auditCriteria',
+            'auditResourceReferences',
+            'auditEngagementPlans',
+            'auditEngagementPlans.specifics',
+            'auditBudgets',
+            'auditEquipments',
+            'auditTeams'
+        ])->findOrFail($id);
 
-    return view('pages.apps.audit-management.audits.action-pages.eval', compact('audit'));
-}
+        return view('pages.apps.audit-management.audits.action-pages.eval', compact('audit'));
+    }
 
-    // public function evaluate($id)
-    // {
-    //     $audit = Audit::findOrFail($id);
-    //     return view('pages.apps.audit-management.audits.action-pages.evaluate', compact('audit'));
-    // }
-
-    // Review audit evaluation
     public function review($id)
     {
         $audit = Audit::findOrFail($id);
@@ -51,7 +181,6 @@ class AuditController extends Controller
 
     public function view($id)
     {
-        // Fetch the audit data along with its related data
         $cl = ChildLaborer::with([
             'education',
             'health',
@@ -63,38 +192,46 @@ class AuditController extends Controller
             'Bbarangay.Bcity.Bprovince.Bregion'
         ])->findOrFail($id);
 
-        // Pass the audit data to the view
         return view('pages.apps.audit-management.audits.show', compact('cl'));
     }
 
-    // View audit (read-only)
-    // public function view($id)
-    // {
-    //     $audit = Audit::findOrFail($id);
-    //     return view('pages.apps.audit-management.audits.action-pages.view', compact('audit'));
-    // }
-
-    // Schedule audit
     public function schedule(ScheduleAuditsDataTable $dataTable, $id)
-{
-    // Fetch the Audit model
-    $audit = Audit::findOrFail($id);
+    {
+        $audit = Audit::findOrFail($id);
 
-    // Query all AuditEngagementPlans related to this audit
-    $auditExecutions = AuditEngagementPlan::with(['specifics'])
-        ->where('fk_audit', $audit->a_id) 
-        ->where('aep_section', 'Audit Execution')
-        ->get();
+        $auditExecutions = AuditEngagementPlan::with(['specifics'])
+            ->where('fk_audit', $audit->a_id) 
+            ->where('aep_section', 'Audit Execution')
+            ->get();
 
+        $aepIds = $auditExecutions->pluck('aep_id');
 
-    // Pass aep_id to the DataTable
-    // Make sure you're passing an array of IDs or the actual data you want in your DataTable
-    $aepIds = $auditExecutions->pluck('aep_id'); // Pluck only the aep_id values
+        return $dataTable
+            ->with('aep_ids', $aepIds)
+            ->render('pages.apps.audit-management.audits.action-pages.schedule', compact('audit'));
+    }
 
-    return $dataTable
-        ->with('aep_ids', $aepIds) // Pass the array of aep_ids to the DataTable
-        ->render('pages.apps.audit-management.audits.action-pages.schedule', compact('audit'));
-}
+    /**
+ * Get dashboard statistics (API)
+ */
+    public function getDashboardStats()
+    {
+        $totalProfiles = ChildLaborer::count();
+        $activeCases = ChildLaborer::where('status', 'Active')->count();
+        $withdrawnCases = ChildLaborer::where('status', 'Withdrawn')->count();
+        $pendingCases = ChildLaborer::where('status', 'Pending')->count();
+    
+    // This month's new profiles
+        $monthlyIncrease = ChildLaborer::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
 
-
+        return response()->json([
+            'total_profiles' => $totalProfiles,
+            'active_cases' => $activeCases,
+            'withdrawn_cases' => $withdrawnCases,
+            'pending_cases' => $pendingCases,
+            'monthly_increase' => $monthlyIncrease
+        ]);
+    }
 }

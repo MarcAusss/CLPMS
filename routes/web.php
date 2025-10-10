@@ -32,19 +32,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('/user-management/permissions', PermissionManagementController::class);
     });
 
+    // CL Profiling Routes
+    Route::name('cl-profiling.')->group(function () {
+        Route::get('/cl-profiling', [AuditController::class, 'index'])->name('index');
+        Route::get('/cl-profiling/datatable', [AuditController::class, 'dataTable'])->name('datatable');
+        
+        // API Routes for CL operations
+        Route::get('/api/child-laborers/{id}', [AuditController::class, 'show'])->name('api.show');
+        Route::get('/api/child-laborers/{id}/edit', [AuditController::class, 'editCl'])->name('api.edit');
+        Route::put('/api/child-laborers/{id}', [AuditController::class, 'updateCl'])->name('api.update');
+        Route::delete('/api/child-laborers/{id}', [AuditController::class, 'destroyCl'])->name('api.destroy');
+        
+        // Location API routes
+        Route::get('/api/provinces', [AuditController::class, 'getProvinces'])->name('api.provinces');
+        Route::get('/api/barangays', [AuditController::class, 'getBarangaysByProvince'])->name('api.barangays');
+    });
+
+    // Keep your existing audit management routes separate
     Route::name('audit-management.')->group(function () {
         Route::resource('/audit-management/audits', AuditManagementController::class);
     });
 
-
     Route::middleware(['auth'])->group(function () {
-        // Route::get('/audit-management/audit/{a_id}/edit', [AuditController::class, 'edit'])->name('audit.edit');
-        // Route::get('/audit-management/audit/evaluate/{id}', [AuditController::class, 'evaluate'])->name('audit.evaluate');
-        // Route::get('/audit-management/audit/{id}/review', [AuditController::class, 'review'])->name('audit.review');
+        // Existing audit routes
         Route::get('/audit-management/audit/{id}', [AuditController::class, 'view'])->name('audit.view');
-        // Route::get('/audit-management/audit/schedule/{id}', [AuditController::class, 'schedule'])->name('audit.schedule');
-
-        // Evaluation Submission
         Route::post('/audit/evaluate/{id}', [AuditController::class, 'submitEvaluation'])->name('audit.evaluate.submit');
     });
 
@@ -57,3 +68,6 @@ Route::get('/error', function () {
 Route::get('/auth/redirect/{provider}', [SocialiteController::class, 'redirect']);
 
 require __DIR__ . '/auth.php';
+
+// Dashboard API routes
+Route::get('/api/dashboard/stats', [AuditController::class, 'getDashboardStats'])->name('api.dashboard.stats');

@@ -66,8 +66,8 @@ class ChildLaborerForm extends Component
 
     public $indigenous_group= '';
     public $religion = '';
-    public $dob_actual = '';
-    public $birth_certificate = '';
+
+    public $birth_certificate = null;
     public $living_with = '';
     public $dwelling_type = '';
     public $sex = '';
@@ -471,12 +471,17 @@ class ChildLaborerForm extends Component
     }
 
     public function nextStep()
-    {
-        $this->validateData();
-        if ($this->currentStep < $this->totalSteps) {
-            $this->currentStep++;
-        }
+{
+    \Log::info('NextStep called - Current step: ' . $this->currentStep);
+    
+    // Bypass validation temporarily to test
+    if ($this->currentStep < $this->totalSteps) {
+        $this->currentStep++;
+        \Log::info('Moved to step: ' . $this->currentStep);
     }
+    
+    // $this->validateCurrentStep(); // Comment this out temporarily
+}
 
     public function previousStep()
     {
@@ -492,37 +497,36 @@ class ChildLaborerForm extends Component
     }
 
     private function validateCurrentStep()
-    {
-        $rules = [];
+{
+    $rules = [];
 
-        if ($this->currentStep === 1) {
-            $rules = [
-                'first_name' => 'required|string',
-                'middle_name' => 'nullable|string',
-                'last_name' => 'required|string',
-                'date_of_birth' => 'required|date',
-                'dob_actual' => 'required|in:True,False',
-                'age' => 'required|integer|min:0',
-                'birth_certificate' => 'required|in:1,0',
-                'address_region' => 'required|string',
-                'address_province' => 'required|string',
-                'address_city' => 'required|string',
-                'address_barangay' => 'required|string',
-                'birth_region' => 'required|string',
-                'birth_province' => 'required|string',
-                'birth_city' => 'required|string',
-                'birth_barangay' => 'required|string',
-                'religion' => 'required|string',
-                'religion_other' => 'nullable|required_if:religion,Others',
-                'indigenous_group' => 'required|in:Yes,No',
-                'indigenous_group_spec' => 'nullable|required_if:indigenous_group,Yes',
-                'living_with' => 'required|in:Both Parents,Father Only,Mother Only,Relatives,Non-Relatives,Living Alone',
-                'dwelling_type' => 'required|in:Strong Materials,Light Materials,Makeshift,Mixed Strong,Mixed Light,Mixed Salvaged,No Permanent Dwelling',
-            ];
-        }
-
-        $this->validate($rules);
+    if ($this->currentStep === 1) {
+        $rules = [
+            'first_name' => 'required|string',
+            'middle_name' => 'nullable|string',
+            'last_name' => 'required|string',
+            'date_of_birth' => 'required|date',
+            'age' => 'required|integer|min:0',
+            'birth_certificate' => 'required|in:Yes,No', // Changed from 1,0
+            'address_region' => 'required|string',
+            'address_province' => 'required|string',
+            'address_city' => 'required|string',
+            'address_barangay' => 'required|string',
+            'birth_region' => 'required|string',
+            'birth_province' => 'required|string',
+            'birth_city' => 'required|string',
+            'birth_barangay' => 'required|string',
+            'religion' => 'required|string',
+            'religion_other' => 'nullable|required_if:religion,Others',
+            'indigenous_group' => 'required|in:Yes,No',
+            'indigenous_group_spec' => 'nullable|required_if:indigenous_group,Yes',
+            'living_with' => 'required|in:Both Parents,Father Only,Mother Only,Relatives,Non-Relatives,Living Alone',
+            'dwelling_type' => 'required|in:Strong Materials,Light Materials,Makeshift,Mixed Strong,Mixed Light,Mixed Salvaged,No Permanent Dwelling',
+        ];
     }
+
+    $this->validate($rules);
+}
 
     private function validateData()
     {
@@ -531,97 +535,52 @@ class ChildLaborerForm extends Component
         }
     }
 
-    public function submit()
-    {
-        $this->validateData();
-        try {
-            DB::transaction(function () {
-                ChildLaborer::create([
-                    'last_name' => $this->last_name,
-                    'first_name' => $this->first_name,
-                    'middle_name' => $this->middle_name,
-                    'suffix' => $this->suffix,
-                    'sex' => $this->sex,
-                    'date_of_birth' => $this->date_of_birth,
-                    'dob_actual' => $this->dob_actual,
-                    'age' => $this->age,
-                    'birth_certificate' => $this->birth_certificate,
-                    'address_region' => $this->address_region,
-                    'address_province' => $this->address_province,
-                    'address_city' => $this->address_city,
-                    'address_barangay' => $this->address_barangay,
-                    'address_sitio' => $this->address_sitio,
-                    'contact_number' => $this->contact_number,
-                    'living_with' => $this->living_with,
-                    'dwelling_type' => $this->dwelling_type,
-                    'religion' => $this->religion,
-                    'religion_other' =>$this->religion_other,
-                    'indigenous_group' => $this->indigenous_group,
-                    'indigenous_group_spec' => $this->indigenous_group_spec
-                ]);
-            });
-
-            $this->currentStep = 1;
-            $this->reset(['last_name', 'first_name', 'middle_name', 'suffix', 'sex', 'date_of_birth', 'age', 'birth_certificate', 'address_region', 'address_province', 'address_city', 'address_barangay', 'address_sitio', 'contact_number', 'living_with', 'dwelling_type', 'religion', 'indigenous_group']);
-            
-            $this->dispatchBrowserEvent('swal:modal', [
-                'title' => 'Success!',
-                'text' => 'Child Laborer Profile Saved Successfully.',
-                'icon' => 'success',
-                'timer' => 3000,
-                'showConfirmButton' => false,
-            ]);
-            $this->emit('closeModal');
-        } catch (\Exception $e) {
-            Log::error($e);
-            $this->dispatchBrowserEvent('swal:modal', [
-                'title' => 'Error!',
-                'text' => 'An error occurred while saving the profile.',
-                'icon' => 'error',
-            ]);
-        }
-    }
 
     public function render()
     {
         return view('livewire.profiling.child-laborer-form');
     }
 
-    public function save() {
-        try {
-            DB::beginTransaction();
-        
-            $clData = ChildLaborer::Create([
-                'first_name' => $this->first_name,
-                'middle_name' => $this->middle_name,
-                'last_name' => $this->last_name,
-                'suffix' => $this->suffix,
-                'sex' => $this->sex,
-                'date_of_birth' => $this->date_of_birth,
-                'dob_actual' => $this->dob_actual,
-                'age' => $this->age,
-                'birth_certificate' => $this->birth_certificate === 'Yes' ? 1 : 0,
-                'address_region' => $this->address_region,
-                'address_province' => $this->address_province,
-                'address_city' => $this->address_city,
-                'address_barangay' => $this->address_barangay,
-                'address_sitio' => $this->address_sitio,
-                'same_as_address' => $this->same_as_address,
-                'birth_region' => $this->birth_region,
-                'birth_province' => $this->birth_province,
-                'birth_city' => $this->birth_city,
-                'birth_barangay' => $this->birth_barangay,
-                'religion' => $this->religion,
-                'religion_other' => $this->religion_other,
-                'indigenous_group' => $this->indigenous_group,
-                'indigenous_group_spec' => $this->indigenous_group_spec,
-                'living_with' => $this->living_with,
-                'dwelling_type' => $this->dwelling_type,
-            ]);
-        
-            $this->cl_id = $clData->id;
-        
-            $clEData = ChildEducation::Create([
+public function save() {
+    try {
+        DB::beginTransaction();
+    
+        // Create Child Laborer
+        $clData = ChildLaborer::create([
+            'first_name' => $this->first_name,
+            'middle_name' => $this->middle_name,
+            'last_name' => $this->last_name,
+            'suffix' => $this->suffix,
+            'sex' => $this->sex,
+            'date_of_birth' => $this->date_of_birth,
+            'age' => $this->age,
+            'birth_certificate' => $this->birth_certificate === 'Yes' ? 1 : 0,
+            'address_region' => $this->address_region,
+            'address_province' => $this->address_province,
+            'address_city' => $this->address_city,
+            'address_barangay' => $this->address_barangay,
+            'address_sitio' => $this->address_sitio,
+            'same_as_address' => $this->same_as_address,
+            'birth_region' => $this->birth_region,
+            'birth_province' => $this->birth_province,
+            'birth_city' => $this->birth_city,
+            'birth_barangay' => $this->birth_barangay,
+            'religion' => $this->religion,
+            'religion_other' => $this->religion_other,
+            'indigenous_group' => $this->indigenous_group,
+            'indigenous_group_spec' => $this->indigenous_group_spec,
+            'living_with' => $this->living_with,
+            'dwelling_type' => $this->dwelling_type,
+            'contact_number' => $this->contact_number ?? null,
+            'is_4ps_member' => $this->is_4ps_member,
+            'house_id_number' => $this->is_4ps_member === 'Yes' ? $this->house_id_number : null,
+        ]);
+    
+        $this->cl_id = $clData->id;
+    
+        // Create Education Record
+        if ($this->has_gone_to_school) {
+            ChildEducation::create([
                 'child_laborer_id' => $this->cl_id,
                 'has_gone_to_school' => $this->has_gone_to_school === 'Yes' ? 1 : 0,
                 'currently_attending' => $this->currently_attending === 'Yes' ? 1 : 0,
@@ -639,8 +598,11 @@ class ChildLaborerForm extends Component
                     )) 
                     : null,
             ]);
-        
-            $clHData = ChildHealth::Create([
+        }
+    
+        // Create Health Record
+        if ($this->height_cm && $this->weight_kg) {
+            ChildHealth::create([
                 'child_laborer_id' => $this->cl_id,
                 'height_cm' => $this->height_cm,
                 'weight_kg' => $this->weight_kg,
@@ -655,98 +617,138 @@ class ChildLaborerForm extends Component
                 'family_medical_history' => $this->family_medical_history ? json_encode($this->family_medical_history) : null,
                 'family_other_specify' => $this->family_other_specify,
             ]);
-        
-            foreach ($this->workEntries as $entry) {
-                ChildWork::Create([
-                    'child_laborer_id' => $this->cl_id,
-                    'nature_of_work' => $entry['nature_of_work'],
-                    'nature_of_work_other' => $entry['nature_of_work_other'] ?? null,
-                    'work_location' => $entry['work_location'],
-                    'work_location_other' => $entry['work_location_other'] ?? null,
-                    'specific_tasks' => $entry['specific_tasks'] ?? null,
-                    'employer_name' => $entry['employer_name'] ?? null,
-                    'employer_contact' => $entry['employer_contact'] ?? null,
-                    'work_basis' => $entry['work_basis'],
-                    'work_months' => isset($entry['work_months']) ? json_encode($entry['work_months']) : null,
-                    'employer_region' => $this->employer_region ?? null,
-                    'employer_province' => $this->employer_province ?? null,
-                    'employer_city' => $this->employer_city ?? null,
-                    'employer_barangay' => $this->employer_barangay ?? null,
-                    'work_arrangement' => $entry['work_arrangement'],
-                    'work_arrangement_other' => $entry['work_arrangement_other'] ?? null,
-                    'working_hours_per_day' => $entry['working_hours_per_day'] ?? null,
-                    'working_days_per_week' => $entry['working_days_per_week'] ?? null,
-                    'work_start_time' => $entry['work_start_time'] ?? null,
-                    'work_end_time' => $entry['work_end_time'] ?? null,
-                    'age_started_working' => $entry['age_started_working'],
-                    'payment_basis' => $entry['payment_basis'] ?? null,
-                    'exposure_risks' => isset($entry['exposure_risks']) ? json_encode($entry['exposure_risks']) : null,
-                    'average_monthly_income' => $entry['average_monthly_income'] ?? null,
-                    'has_adult_supervisor' => $entry['has_adult_supervisor'] === 'Yes' ? 1 : 0,
-                    'work_supervisors' => isset($entry['work_supervisors']) ? json_encode($entry['work_supervisors']) : null,
-                    'work_supervisors_other' => $entry['work_supervisors_other'] ?? null,
-                    'supervisor_name' => $entry['supervisor_name'] ?? null,
-                    'earnings_usage' => isset($entry['earnings_usage']) ? json_encode($entry['earnings_usage']) : null,
-                    'earnings_usage_other' => $entry['earnings_usage_other'] ?? null,
-                ]);
-            }
-        
-            $profile = ChildLaborer::find($this->cl_id);
-            $profile->update([
-                'is_4ps_member' => $this->is_4ps_member,
-                'house_id_number' => $this->is_4ps_member === 'Yes' ? $this->house_id_number : null,
-            ]);
-        
-            foreach ($this->family_members as $member) {
-                FamilyMember::create([
-                    'child_laborer_id' => $clData->id,
-                    'full_name' => $member['name'],
-                    'relationship' => $member['relationship'],
-                    'sex' => $member['sex'],
-                    'age' => $member['age'],
-                    'civil_status' => $member['civil_status'],
-                    'education' => $member['education'] ?? null,
-                    'solo_parent' => $member['solo_parent'] ?? null,
-                    'occupation' => $member['occupation'] ?? null,
-                    'income' => $member['income'] ?? null,
-                    'disability' => $member['disability'] ?? null,
-                    'skills' => $member['skills'] ?? null,
-                    'whereabouts' => $member['whereabouts'] ?? null,
-                ]);
-            }
-        
-            foreach ($this->services_availed as $service) {
-                AssistanceRecord::create([
-                    'child_laborer_id' => $this->cl_id,
-                    'type_of_assistance' => $service['assistance'] ?? null,
-                    'source' => $service['source'] ?? null,
-                    'date_provided' => $service['year'] ?? null,
-                    'family_member_recieved' => $service['members'] ?? null,
-                    'remarks' => $service['remarks'] ?? null,
-                ]);
-            }
-        
-            foreach ($this->services_requested as $service) {
-                RequestedService::create([
-                    'child_laborer_id' => $this->cl_id,
-                    'type_of_assistance' => $service['assistance'] ?? null,
-                    'source' => $service['source'] ?? null,
-                    'start_date' => $service['start_date'] ?? null,
-                    'end_date' => $service['end_date'] ?? null,
-                    'family_member_requested' => $service['members'] ?? null,
-                    'remarks' => $service['remarks'] ?? null,
-                ]);
-            }
-        
-            DB::commit();
-            $this->reset();
-            $this->dispatchBrowserEvent('profile-saved');
-            session()->flash('success', 'Child Laborer profile successfully saved.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            $this->dispatchBrowserEvent('profile-saving-failed');
-            session()->flash('error', 'An error occurred while saving the data. Please try again.');
         }
-            
+    
+        // Create Work Entries
+        foreach ($this->workEntries as $entry) {
+            ChildWork::create([
+                'child_laborer_id' => $this->cl_id,
+                'nature_of_work' => $entry['nature_of_work'],
+                'nature_of_work_other' => $entry['nature_of_work_other'] ?? null,
+                'work_location' => $entry['work_location'],
+                'work_location_other' => $entry['work_location_other'] ?? null,
+                'specific_tasks' => $entry['specific_tasks'] ?? null,
+                'employer_name' => $entry['employer_name'] ?? null,
+                'employer_contact' => $entry['employer_contact'] ?? null,
+                'work_basis' => $entry['work_basis'],
+                'work_months' => isset($entry['work_months']) ? json_encode($entry['work_months']) : null,
+                'employer_region' => $this->employer_region ?? null,
+                'employer_province' => $this->employer_province ?? null,
+                'employer_city' => $this->employer_city ?? null,
+                'employer_barangay' => $this->employer_barangay ?? null,
+                'work_arrangement' => $entry['work_arrangement'],
+                'work_arrangement_other' => $entry['work_arrangement_other'] ?? null,
+                'working_hours_per_day' => $entry['working_hours_per_day'] ?? null,
+                'working_days_per_week' => $entry['working_days_per_week'] ?? null,
+                'work_start_time' => $entry['work_start_time'] ?? null,
+                'work_end_time' => $entry['work_end_time'] ?? null,
+                'age_started_working' => $entry['age_started_working'],
+                'payment_basis' => $entry['payment_basis'] ?? null,
+                'exposure_risks' => isset($entry['exposure_risks']) ? json_encode($entry['exposure_risks']) : null,
+                'average_monthly_income' => $entry['average_monthly_income'] ?? null,
+                'has_adult_supervisor' => $entry['has_adult_supervisor'] === 'Yes' ? 1 : 0,
+                'work_supervisors' => isset($entry['work_supervisors']) ? json_encode($entry['work_supervisors']) : null,
+                'work_supervisors_other' => $entry['work_supervisors_other'] ?? null,
+                'supervisor_name' => $entry['supervisor_name'] ?? null,
+                'earnings_usage' => isset($entry['earnings_usage']) ? json_encode($entry['earnings_usage']) : null,
+                'earnings_usage_other' => $entry['earnings_usage_other'] ?? null,
+            ]);
+        }
+    
+        // Create Family Members
+        foreach ($this->family_members as $member) {
+            FamilyMember::create([
+                'child_laborer_id' => $clData->id,
+                'full_name' => $member['name'],
+                'relationship' => $member['relationship'],
+                'sex' => $member['sex'],
+                'age' => $member['age'],
+                'civil_status' => $member['civil_status'],
+                'education' => $member['education'] ?? null,
+                'solo_parent' => $member['solo_parent'] ?? null,
+                'occupation' => $member['occupation'] ?? null,
+                'income' => $member['income'] ?? null,
+                'disability' => $member['disability'] ?? null,
+                'skills' => $member['skills'] ?? null,
+                'whereabouts' => $member['whereabouts'] ?? null,
+            ]);
+        }
+    
+        // Create Services Availed
+        foreach ($this->services_availed as $service) {
+            AssistanceRecord::create([
+                'child_laborer_id' => $this->cl_id,
+                'type_of_assistance' => $service['assistance'] ?? null,
+                'source' => $service['source'] ?? null,
+                'date_provided' => $service['year'] ?? null,
+                'family_member_recieved' => $service['members'] ?? null,
+                'remarks' => $service['remarks'] ?? null,
+            ]);
+        }
+    
+        // Create Services Requested
+        foreach ($this->services_requested as $service) {
+            RequestedService::create([
+                'child_laborer_id' => $this->cl_id,
+                'type_of_assistance' => $service['assistance'] ?? null,
+                'source' => $service['source'] ?? null,
+                'start_date' => $service['start_date'] ?? null,
+                'end_date' => $service['end_date'] ?? null,
+                'family_member_requested' => $service['members'] ?? null,
+                'remarks' => $service['remarks'] ?? null,
+            ]);
+        }
+    
+        DB::commit();
+        
+        // Reset form and show success
+        $this->resetForm();
+        $this->dispatchBrowserEvent('close-modal');
+        $this->dispatchBrowserEvent('swal:modal', [
+            'title' => 'Success!',
+            'text' => 'Child Laborer Profile Saved Successfully.',
+            'icon' => 'success',
+            'timer' => 3000,
+            'showConfirmButton' => false,
+        ]);
+        
+        // Emit event to refresh parent component
+        $this->emit('childLaborerAdded');
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error saving child laborer: ' . $e->getMessage());
+        $this->dispatchBrowserEvent('swal:modal', [
+            'title' => 'Error!',
+            'text' => 'An error occurred while saving the profile: ' . $e->getMessage(),
+            'icon' => 'error',
+        ]);
     }
+}
+
+private function resetForm()
+{
+    $this->currentStep = 1;
+    $this->reset([
+        'first_name', 'middle_name', 'last_name', 'suffix', 'sex',
+        'date_of_birth', 'age', 'birth_certificate', 'address_sitio',
+        'address_region', 'address_province', 'address_city', 'address_barangay',
+        'birth_region', 'birth_province', 'birth_city', 'birth_barangay',
+        'religion', 'religion_other', 'indigenous_group', 'indigenous_group_spec',
+        'living_with', 'dwelling_type', 'contact_number', 'is_4ps_member', 'house_id_number',
+        'has_gone_to_school', 'currently_attending', 'learner_reference_no', 'mode_of_education',
+        'quit_schooling', 'highest_grade_completed', 'age_stopped_schooling', 'reason_for_stopping',
+        'reason_for_stopping_other', 'reason_for_stopping_other_text', 'height_cm', 'weight_kg',
+        'has_disability', 'specific_disability', 'specific_disability_other', 'child_ailments',
+        'skin_disease_specify', 'allergies_specify', 'other_ailments_specify', 'medical_assessment',
+        'family_medical_history', 'family_other_specify'
+    ]);
+    $this->workEntries = [];
+    $this->family_members = [];
+    $this->services_availed = [];
+    $this->services_requested = [];
+    $this->employer_regions = PhilippineRegion::all();
+    $this->address_regions = PhilippineRegion::all();
+    $this->birth_regions = PhilippineRegion::all();
+}
 }

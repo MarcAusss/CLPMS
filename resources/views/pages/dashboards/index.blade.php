@@ -38,13 +38,13 @@
                     <div class="card card-flush h-100">
                         <div class="card-header pt-5">
                             <div class="card-title d-flex flex-column">
-                                <span class="fs-2hx fw-bold text-gray-900 me-2 lh-1 ls-n2">3,157</span>
+                                <span class="fs-2hx fw-bold text-gray-900 me-2 lh-1 ls-n2" id="totalActiveCases">0</span>
                                 <span class="text-gray-500 pt-1 fw-semibold fs-6">Total Active Child Labor Cases</span>
                             </div>
                         </div>
                         <div class="card-body pt-0">
                             <div class="d-flex align-items-center">
-                                <span class="badge badge-light-success fs-7 fw-semibold">+250</span>
+                                <span class="badge badge-light-success fs-7 fw-semibold" id="monthlyIncrease">+0</span>
                                 <span class="fs-7 fw-semibold text-gray-500 ms-2">Profiles encoded this month</span>
                             </div>
                         </div>
@@ -57,7 +57,7 @@
                     <div class="card card-flush h-100">
                         <div class="card-header pt-5">
                             <div class="card-title d-flex flex-column">
-                                <span class="fs-2hx fw-bold text-success me-2 lh-1 ls-n2">4,567</span>
+                                <span class="fs-2hx fw-bold text-success me-2 lh-1 ls-n2" id="totalWithdrawnCases">0</span>
                                 <span class="text-gray-500 pt-1 fw-semibold fs-6">Total Withdrawn Child Labor Cases</span>
                             </div>
                         </div>
@@ -83,11 +83,11 @@
                         <div class="col-md-6">
                             <div class="d-flex align-items-center p-4 bg-light-primary rounded">
                                 <span class="svg-icon svg-icon-2hx svg-icon-primary me-4">
-                                    <i class="fas fa-list fs-1 text-primary"></i>
+                                    <i class="fas fa-users fs-1 text-primary"></i>
                                 </span>
                                 <div class="d-flex flex-column">
-                                    <a href="#" class="fs-4 fw-bold text-gray-900 text-hover-primary">Profiling List</a>
-                                    <span class="text-gray-600">View all child labor profiles</span>
+                                    <a href="{{ route('cl-profiling.index') }}" class="fs-4 fw-bold text-gray-900 text-hover-primary">CL Profiling</a>
+                                    <span class="text-gray-600">Manage child labor profiles and records</span>
                                 </div>
                             </div>
                         </div>
@@ -102,10 +102,68 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-4 bg-light-warning rounded">
+                                <span class="svg-icon svg-icon-2hx svg-icon-warning me-4">
+                                    <i class="fas fa-plus-circle fs-1 text-warning"></i>
+                                </span>
+                                <div class="d-flex flex-column">
+                                    <a href="#" class="fs-4 fw-bold text-gray-900 text-hover-primary" data-bs-toggle="modal" data-bs-target="#addAuditModalComponent">Add New Profile</a>
+                                    <span class="text-gray-600">Create new child labor profile</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-4 bg-light-info rounded">
+                                <span class="svg-icon svg-icon-2hx svg-icon-info me-4">
+                                    <i class="fas fa-search fs-1 text-info"></i>
+                                </span>
+                                <div class="d-flex flex-column">
+                                    <a href="{{ route('cl-profiling.index') }}#search" class="fs-4 fw-bold text-gray-900 text-hover-primary">Search Profiles</a>
+                                    <span class="text-gray-600">Find specific child labor cases</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <!--end::Quick Actions-->
+
+            <!--begin::Recent Activity-->
+            <div class="card mb-5">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold">Recent CL Profile Activity</h3>
+                    <div class="card-toolbar">
+                        <a href="{{ route('cl-profiling.index') }}" class="btn btn-sm btn-light-primary">View All</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-rounded table-striped border gy-7 gs-7">
+                            <thead>
+                                <tr class="fw-bold fs-6 text-gray-800 border-bottom border-gray-200">
+                                    <th>Profile ID</th>
+                                    <th>Name</th>
+                                    <th>Age</th>
+                                    <th>Province</th>
+                                    <th>Status</th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentActivityTable">
+                                <!-- Data will be populated via JavaScript -->
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-5">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Loading recent activity...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!--end::Recent Activity-->
 
             <!--begin::Regional Statistics-->
             <div class="card">
@@ -123,36 +181,13 @@
                                     <th>Completion Rate</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="regionalStatsTable">
+                                <!-- Data will be populated via JavaScript -->
                                 <tr>
-                                    <td class="fw-semibold">National Capital Region (NCR)</td>
-                                    <td>856</td>
-                                    <td>1,234</td>
-                                    <td><span class="badge badge-light-success">85%</span></td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold">Central Luzon</td>
-                                    <td>643</td>
-                                    <td>892</td>
-                                    <td><span class="badge badge-light-warning">72%</span></td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold">CALABARZON</td>
-                                    <td>587</td>
-                                    <td>765</td>
-                                    <td><span class="badge badge-light-success">88%</span></td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold">Central Visayas</td>
-                                    <td>421</td>
-                                    <td>543</td>
-                                    <td><span class="badge badge-light-warning">68%</span></td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold">Davao Region</td>
-                                    <td>389</td>
-                                    <td>498</td>
-                                    <td><span class="badge badge-light-danger">62%</span></td>
+                                    <td colspan="4" class="text-center text-muted py-5">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Loading regional statistics...
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -163,8 +198,53 @@
         </div>
         <!--end::Left Column-->
 
-        <!--begin::Right Column - Reminders-->
+        <!--begin::Right Column - Reminders & System Info-->
         <div class="col-xl-4">
+            <!--begin::System Overview-->
+            <div class="card mb-5">
+                <div class="card-header">
+                    <h3 class="card-title fw-bold">System Overview</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="symbol symbol-50px symbol-circle me-4 bg-light-primary">
+                                <span class="symbol-label text-primary">
+                                    <i class="fas fa-database fs-2"></i>
+                                </span>
+                            </div>
+                            <div class="d-flex flex-column">
+                                <span class="fs-5 fw-bold text-gray-900" id="totalProfiles">0</span>
+                                <span class="text-gray-600">Total Profiles</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="symbol symbol-50px symbol-circle me-4 bg-light-success">
+                                <span class="symbol-label text-success">
+                                    <i class="fas fa-check-circle fs-2"></i>
+                                </span>
+                            </div>
+                            <div class="d-flex flex-column">
+                                <span class="fs-5 fw-bold text-gray-900" id="completedProfiles">0</span>
+                                <span class="text-gray-600">Completed Profiles</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="symbol symbol-50px symbol-circle me-4 bg-light-warning">
+                                <span class="symbol-label text-warning">
+                                    <i class="fas fa-clock fs-2"></i>
+                                </span>
+                            </div>
+                            <div class="d-flex flex-column">
+                                <span class="fs-5 fw-bold text-gray-900" id="pendingProfiles">0</span>
+                                <span class="text-gray-600">Pending Review</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--end::System Overview-->
+
             <!--begin::Reminders Card-->
             <div class="card">
                 <div class="card-header">
@@ -183,21 +263,23 @@
                                     <span class="symbol-label text-warning fw-bold">NOW</span>
                                 </div>
                                 <div class="d-flex flex-column">
-                                    <span class="fs-6 fw-bold text-gray-900">1:14 AM - System Active</span>
-                                    <span class="fs-7 text-gray-600">FRIDAY 19/09/2025</span>
+                                    <span class="fs-6 fw-bold text-gray-900" id="currentTime">Loading...</span>
+                                    <span class="fs-7 text-gray-600" id="currentDate">Loading...</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Upcoming Reminders -->
+                        <!-- System Reminders -->
                         <div class="d-flex flex-stack py-3 border-bottom border-gray-300 border-bottom-dashed">
                             <div class="d-flex align-items-center">
                                 <div class="symbol symbol-35px symbol-circle me-4 bg-light-primary">
-                                    <span class="symbol-label text-primary fs-7">2:00</span>
+                                    <span class="symbol-label text-primary fs-7">
+                                        <i class="fas fa-sync"></i>
+                                    </span>
                                 </div>
                                 <div class="d-flex flex-column">
-                                    <span class="fs-6 fw-bold text-gray-900">Daily Report Generation</span>
-                                    <span class="fs-7 text-gray-600">Automated system report</span>
+                                    <span class="fs-6 fw-bold text-gray-900">Data Sync Required</span>
+                                    <span class="fs-7 text-gray-600">Sync pending profile updates</span>
                                 </div>
                             </div>
                         </div>
@@ -205,11 +287,13 @@
                         <div class="d-flex flex-stack py-3 border-bottom border-gray-300 border-bottom-dashed">
                             <div class="d-flex align-items-center">
                                 <div class="symbol symbol-35px symbol-circle me-4 bg-light-info">
-                                    <span class="symbol-label text-info fs-7">3:00</span>
+                                    <span class="symbol-label text-info fs-7">
+                                        <i class="fas fa-chart-line"></i>
+                                    </span>
                                 </div>
                                 <div class="d-flex flex-column">
-                                    <span class="fs-6 fw-bold text-gray-900">Data Backup</span>
-                                    <span class="fs-7 text-gray-600">System maintenance</span>
+                                    <span class="fs-6 fw-bold text-gray-900">Monthly Report Due</span>
+                                    <span class="fs-7 text-gray-600">Generate monthly statistics</span>
                                 </div>
                             </div>
                         </div>
@@ -217,24 +301,13 @@
                         <div class="d-flex flex-stack py-3 border-bottom border-gray-300 border-bottom-dashed">
                             <div class="d-flex align-items-center">
                                 <div class="symbol symbol-35px symbol-circle me-4 bg-light-success">
-                                    <span class="symbol-label text-success fs-7">4:00</span>
+                                    <span class="symbol-label text-success fs-7">
+                                        <i class="fas fa-shield-alt"></i>
+                                    </span>
                                 </div>
                                 <div class="d-flex flex-column">
-                                    <span class="fs-6 fw-bold text-gray-900">Regional Data Sync</span>
-                                    <span class="fs-7 text-gray-600">Update regional databases</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Add more reminders as needed -->
-                        <div class="d-flex flex-stack py-3 border-bottom border-gray-300 border-bottom-dashed">
-                            <div class="d-flex align-items-center">
-                                <div class="symbol symbol-35px symbol-circle me-4 bg-light-secondary">
-                                    <span class="symbol-label text-secondary fs-7">5:00</span>
-                                </div>
-                                <div class="d-flex flex-column">
-                                    <span class="fs-6 fw-bold text-gray-900">Weekly Analytics</span>
-                                    <span class="fs-7 text-gray-600">Performance review</span>
+                                    <span class="fs-6 fw-bold text-gray-900">System Backup</span>
+                                    <span class="fs-7 text-gray-600">Scheduled maintenance</span>
                                 </div>
                             </div>
                         </div>
@@ -242,9 +315,9 @@
                     <!--end::Reminders List-->
                 </div>
                 <div class="card-footer py-4">
-                    <button class="btn btn-light-primary w-100" type="button">
-                        <i class="fas fa-plus me-2"></i>Add New Reminder
-                    </button>
+                    <a href="{{ route('cl-profiling.index') }}" class="btn btn-light-primary w-100">
+                        <i class="fas fa-tasks me-2"></i>Manage Profiles
+                    </a>
                 </div>
             </div>
             <!--end::Reminders Card-->
@@ -258,21 +331,114 @@
         // Update current date and time
         function updateDateTime() {
             const now = new Date();
-            const options = { 
+            const dateOptions = { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
-                day: 'numeric',
+                day: 'numeric'
+            };
+            const timeOptions = {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
             };
-            document.getElementById('currentDateTime').textContent = now.toLocaleDateString('en-US', options);
+            
+            document.getElementById('currentDateTime').textContent = 
+                now.toLocaleDateString('en-US', dateOptions) + ' • ' + 
+                now.toLocaleTimeString('en-US', timeOptions);
+                
+            document.getElementById('currentDate').textContent = 
+                now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleTimeString('en-US', timeOptions);
         }
 
-        // Update every second
-        setInterval(updateDateTime, 1000);
-        updateDateTime(); // Initial call
+        // Load dashboard statistics
+        function loadDashboardStats() {
+            // In a real application, you would fetch this from your API
+            // For now, we'll use mock data
+            setTimeout(() => {
+                document.getElementById('totalActiveCases').textContent = '3,157';
+                document.getElementById('monthlyIncrease').textContent = '+250';
+                document.getElementById('totalWithdrawnCases').textContent = '4,567';
+                document.getElementById('totalProfiles').textContent = '7,724';
+                document.getElementById('completedProfiles').textContent = '6,189';
+                document.getElementById('pendingProfiles').textContent = '1,535';
+
+                // Load recent activity
+                loadRecentActivity();
+                
+                // Load regional stats
+                loadRegionalStats();
+            }, 1000);
+        }
+
+        // Load recent activity
+        function loadRecentActivity() {
+            const recentActivity = [
+                { id: 'CL00123', name: 'Dela Cruz, Juan', age: 14, province: 'Metro Manila', status: 'Active', updated: '2 hours ago' },
+                { id: 'CL00124', name: 'Santos, Maria', age: 15, province: 'Cavite', status: 'Pending', updated: '4 hours ago' },
+                { id: 'CL00125', name: 'Reyes, Pedro', age: 13, province: 'Laguna', status: 'Withdrawn', updated: '1 day ago' },
+                { id: 'CL00126', name: 'Gonzales, Ana', age: 16, province: 'Bulacan', status: 'Active', updated: '1 day ago' },
+                { id: 'CL00127', name: 'Torres, Miguel', age: 14, province: 'Rizal', status: 'Pending', updated: '2 days ago' }
+            ];
+
+            const tbody = document.getElementById('recentActivityTable');
+            tbody.innerHTML = '';
+
+            recentActivity.forEach(activity => {
+                const statusClass = activity.status === 'Active' ? 'badge-light-success' : 
+                                  activity.status === 'Pending' ? 'badge-light-warning' : 'badge-light-danger';
+                
+                const row = `
+                    <tr>
+                        <td class="fw-semibold">${activity.id}</td>
+                        <td>${activity.name}</td>
+                        <td>${activity.age}</td>
+                        <td>${activity.province}</td>
+                        <td><span class="badge ${statusClass}">${activity.status}</span></td>
+                        <td class="text-muted">${activity.updated}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Load regional statistics
+        function loadRegionalStats() {
+            const regionalStats = [
+                { region: 'National Capital Region (NCR)', active: 856, withdrawn: 1234, rate: 85 },
+                { region: 'Central Luzon', active: 643, withdrawn: 892, rate: 72 },
+                { region: 'CALABARZON', active: 587, withdrawn: 765, rate: 88 },
+                { region: 'Central Visayas', active: 421, withdrawn: 543, rate: 68 },
+                { region: 'Davao Region', active: 389, withdrawn: 498, rate: 62 }
+            ];
+
+            const tbody = document.getElementById('regionalStatsTable');
+            tbody.innerHTML = '';
+
+            regionalStats.forEach(stat => {
+                const rateClass = stat.rate >= 80 ? 'badge-light-success' : 
+                                stat.rate >= 70 ? 'badge-light-warning' : 'badge-light-danger';
+                
+                const row = `
+                    <tr>
+                        <td class="fw-semibold">${stat.region}</td>
+                        <td>${stat.active.toLocaleString()}</td>
+                        <td>${stat.withdrawn.toLocaleString()}</td>
+                        <td><span class="badge ${rateClass}">${stat.rate}%</span></td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            loadDashboardStats();
+        });
     </script>
     @endpush
 
