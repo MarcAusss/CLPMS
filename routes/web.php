@@ -23,14 +23,10 @@ use App\Http\Controllers\AuditController;
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/', [DashboardController::class, 'index']);
-
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::name('user-management.')->group(function () {
-        Route::resource('/user-management/users', UserManagementController::class);
-        Route::resource('/user-management/roles', RoleManagementController::class);
-        Route::resource('/user-management/permissions', PermissionManagementController::class);
-    });
+    // Dashboard API routes
+    Route::get('/api/dashboard/stats', [AuditController::class, 'getDashboardStats'])->name('api.dashboard.stats');
 
     // CL Profiling Routes
     Route::name('cl-profiling.')->group(function () {
@@ -46,6 +42,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Location API routes
         Route::get('/api/provinces', [AuditController::class, 'getProvinces'])->name('api.provinces');
         Route::get('/api/barangays', [AuditController::class, 'getBarangaysByProvince'])->name('api.barangays');
+    });
+
+    Route::name('user-management.')->group(function () {
+        Route::resource('/user-management/users', UserManagementController::class);
+        Route::resource('/user-management/roles', RoleManagementController::class);
+        Route::resource('/user-management/permissions', PermissionManagementController::class);
     });
 
     // Keep your existing audit management routes separate
@@ -68,6 +70,3 @@ Route::get('/error', function () {
 Route::get('/auth/redirect/{provider}', [SocialiteController::class, 'redirect']);
 
 require __DIR__ . '/auth.php';
-
-// Dashboard API routes
-Route::get('/api/dashboard/stats', [AuditController::class, 'getDashboardStats'])->name('api.dashboard.stats');

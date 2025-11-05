@@ -327,85 +327,154 @@
     <!--end::Main Content-->
 
     @push('scripts')
-    <script>
-        // Update current date and time
-        function updateDateTime() {
-            const now = new Date();
-            const dateOptions = { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric'
-            };
-            const timeOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            };
+<script>
+    // Update current date and time
+    function updateDateTime() {
+        const now = new Date();
+        const dateOptions = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric'
+        };
+        const timeOptions = {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        
+        document.getElementById('currentDateTime').textContent = 
+            now.toLocaleDateString('en-US', dateOptions) + ' • ' + 
+            now.toLocaleTimeString('en-US', timeOptions);
             
-            document.getElementById('currentDateTime').textContent = 
-                now.toLocaleDateString('en-US', dateOptions) + ' • ' + 
-                now.toLocaleTimeString('en-US', timeOptions);
-                
-            document.getElementById('currentDate').textContent = 
-                now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            document.getElementById('currentTime').textContent = 
-                now.toLocaleTimeString('en-US', timeOptions);
+        document.getElementById('currentDate').textContent = 
+            now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('currentTime').textContent = 
+            now.toLocaleTimeString('en-US', timeOptions);
+    }
+
+    // Load dashboard statistics from API
+    async function loadDashboardStats() {
+        try {
+            const response = await fetch("{{ route('api.dashboard.stats') }}");
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            
+            // Update statistics with real data
+            document.getElementById('totalActiveCases').textContent = data.active_cases.toLocaleString();
+            document.getElementById('monthlyIncrease').textContent = `+${data.monthly_increase}`;
+            document.getElementById('totalWithdrawnCases').textContent = data.withdrawn_cases.toLocaleString();
+            document.getElementById('totalProfiles').textContent = data.total_profiles.toLocaleString();
+            document.getElementById('completedProfiles').textContent = (data.withdrawn_cases + data.active_cases).toLocaleString();
+            document.getElementById('pendingProfiles').textContent = data.pending_cases.toLocaleString();
+
+            // Load recent activity and regional stats
+            await loadRecentActivity();
+            await loadRegionalStats();
+            
+        } catch (error) {
+            console.error('Error loading dashboard stats:', error);
+            // Fallback to mock data if API fails
+            loadMockData();
         }
+    }
 
-        // Load dashboard statistics
-        function loadDashboardStats() {
-            // In a real application, you would fetch this from your API
-            // For now, we'll use mock data
-            setTimeout(() => {
-                document.getElementById('totalActiveCases').textContent = '3,157';
-                document.getElementById('monthlyIncrease').textContent = '+250';
-                document.getElementById('totalWithdrawnCases').textContent = '4,567';
-                document.getElementById('totalProfiles').textContent = '7,724';
-                document.getElementById('completedProfiles').textContent = '6,189';
-                document.getElementById('pendingProfiles').textContent = '1,535';
+    // Fallback mock data
+    function loadMockData() {
+        document.getElementById('totalActiveCases').textContent = '3,157';
+        document.getElementById('monthlyIncrease').textContent = '+250';
+        document.getElementById('totalWithdrawnCases').textContent = '4,567';
+        document.getElementById('totalProfiles').textContent = '7,724';
+        document.getElementById('completedProfiles').textContent = '6,189';
+        document.getElementById('pendingProfiles').textContent = '1,535';
+        
+        loadRecentActivity();
+        loadRegionalStats();
+    }
 
-                // Load recent activity
-                loadRecentActivity();
-                
-                // Load regional stats
-                loadRegionalStats();
-            }, 1000);
-        }
-
-        // Load recent activity
-        function loadRecentActivity() {
-            const recentActivity = [
-                { id: 'CL00123', name: 'Dela Cruz, Juan', age: 14, province: 'Metro Manila', status: 'Active', updated: '2 hours ago' },
-                { id: 'CL00124', name: 'Santos, Maria', age: 15, province: 'Cavite', status: 'Pending', updated: '4 hours ago' },
-                { id: 'CL00125', name: 'Reyes, Pedro', age: 13, province: 'Laguna', status: 'Withdrawn', updated: '1 day ago' },
-                { id: 'CL00126', name: 'Gonzales, Ana', age: 16, province: 'Bulacan', status: 'Active', updated: '1 day ago' },
-                { id: 'CL00127', name: 'Torres, Miguel', age: 14, province: 'Rizal', status: 'Pending', updated: '2 days ago' }
-            ];
-
+    // Load recent activity from API
+    async function loadRecentActivity() {
+        try {
+            // First, let's try to get recent profiles from the datatable endpoint
+            const response = await fetch("{{ route('cl-profiling.datatable') }}?length=5");
+            if (!response.ok) {
+                throw new Error('Failed to fetch recent activity');
+            }
+            const data = await response.json();
+            
             const tbody = document.getElementById('recentActivityTable');
             tbody.innerHTML = '';
 
-            recentActivity.forEach(activity => {
-                const statusClass = activity.status === 'Active' ? 'badge-light-success' : 
-                                  activity.status === 'Pending' ? 'badge-light-warning' : 'badge-light-danger';
-                
-                const row = `
-                    <tr>
-                        <td class="fw-semibold">${activity.id}</td>
-                        <td>${activity.name}</td>
-                        <td>${activity.age}</td>
-                        <td>${activity.province}</td>
-                        <td><span class="badge ${statusClass}">${activity.status}</span></td>
-                        <td class="text-muted">${activity.updated}</td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
+            if (data.data && data.data.length > 0) {
+                data.data.forEach(activity => {
+                    const statusClass = activity.status === 'Active' ? 'badge-light-success' : 
+                                      activity.status === 'Pending' ? 'badge-light-warning' : 'badge-light-danger';
+                    
+                    // Calculate time ago
+                    const updatedAt = new Date(activity.updated_at || activity.created_at);
+                    const timeAgo = getTimeAgo(updatedAt);
+                    
+                    const row = `
+                        <tr>
+                            <td class="fw-semibold">${activity.id}</td>
+                            <td>${activity.full_name}</td>
+                            <td>${activity.age}</td>
+                            <td>${activity.province}</td>
+                            <td><span class="badge ${statusClass}">${activity.status}</span></td>
+                            <td class="text-muted">${timeAgo}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } else {
+                // Fallback to mock data if no real data
+                loadMockRecentActivity();
+            }
+            
+        } catch (error) {
+            console.error('Error loading recent activity:', error);
+            loadMockRecentActivity();
         }
+    }
 
-        // Load regional statistics
-        function loadRegionalStats() {
+    // Mock recent activity data
+    function loadMockRecentActivity() {
+        const recentActivity = [
+            { id: 'CL00123', name: 'Dela Cruz, Juan', age: 14, province: 'Metro Manila', status: 'Active', updated: '2 hours ago' },
+            { id: 'CL00124', name: 'Santos, Maria', age: 15, province: 'Cavite', status: 'Pending', updated: '4 hours ago' },
+            { id: 'CL00125', name: 'Reyes, Pedro', age: 13, province: 'Laguna', status: 'Withdrawn', updated: '1 day ago' },
+            { id: 'CL00126', name: 'Gonzales, Ana', age: 16, province: 'Bulacan', status: 'Active', updated: '1 day ago' },
+            { id: 'CL00127', name: 'Torres, Miguel', age: 14, province: 'Rizal', status: 'Pending', updated: '2 days ago' }
+        ];
+
+        const tbody = document.getElementById('recentActivityTable');
+        tbody.innerHTML = '';
+
+        recentActivity.forEach(activity => {
+            const statusClass = activity.status === 'Active' ? 'badge-light-success' : 
+                              activity.status === 'Pending' ? 'badge-light-warning' : 'badge-light-danger';
+            
+            const row = `
+                <tr>
+                    <td class="fw-semibold">${activity.id}</td>
+                    <td>${activity.name}</td>
+                    <td>${activity.age}</td>
+                    <td>${activity.province}</td>
+                    <td><span class="badge ${statusClass}">${activity.status}</span></td>
+                    <td class="text-muted">${activity.updated}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    // Load regional statistics (you can enhance this with real API later)
+    async function loadRegionalStats() {
+        try {
+            // For now, we'll use mock data for regional stats
+            // You can create an API endpoint for this later
             const regionalStats = [
                 { region: 'National Capital Region (NCR)', active: 856, withdrawn: 1234, rate: 85 },
                 { region: 'Central Luzon', active: 643, withdrawn: 892, rate: 72 },
@@ -431,15 +500,41 @@
                 `;
                 tbody.innerHTML += row;
             });
+            
+        } catch (error) {
+            console.error('Error loading regional stats:', error);
+            // Regional stats will use the mock data above
         }
+    }
 
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-            loadDashboardStats();
-        });
-    </script>
-    @endpush
+    // Helper function to calculate time ago
+    function getTimeAgo(date) {
+        const now = new Date();
+        const diffInMs = now - new Date(date);
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+        if (diffInHours < 1) {
+            return 'Just now';
+        } else if (diffInHours < 24) {
+            return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+        } else if (diffInDays < 7) {
+            return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+        } else {
+            return new Date(date).toLocaleDateString();
+        }
+    }
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+        loadDashboardStats();
+        
+        // Refresh stats every 5 minutes
+        setInterval(loadDashboardStats, 300000);
+    });
+</script>
+@endpush
 
 </x-default-layout>

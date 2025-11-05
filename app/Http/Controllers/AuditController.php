@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Audit;
 use App\Models\AuditExecution;
 use App\DataTables\ScheduleAuditsDataTable;
-use App\DataTables\AuditsDataTable; // You'll need this for CL profiling
+use App\DataTables\AuditsDataTable;
 use Illuminate\Support\Facades\Log;
 use App\Models\AuditEngagementPlan;
 use App\Models\ChildLaborer;
@@ -16,12 +16,16 @@ use Yajra\DataTables\DataTables;
 
 class AuditController extends Controller
 {
+    // =============================================
+    // CL PROFILING METHODS
+    // =============================================
+
     /**
      * Display CL Profiling main page with DataTable
      */
     public function index(AuditsDataTable $dataTable)
     {
-        return $dataTable->render('pages.apps.audit-management.audits.index');
+        return $dataTable->render('pages.apps.audit-management.audits.list');
     }
 
     /**
@@ -148,7 +152,34 @@ class AuditController extends Controller
         return response()->json($barangays);
     }
 
-    // Your existing methods below...
+    /**
+     * Get dashboard statistics (API)
+     */
+    public function getDashboardStats()
+    {
+        $totalProfiles = ChildLaborer::count();
+        $activeCases = ChildLaborer::where('status', 'Active')->count();
+        $withdrawnCases = ChildLaborer::where('status', 'Withdrawn')->count();
+        $pendingCases = ChildLaborer::where('status', 'Pending')->count();
+        
+        // This month's new profiles
+        $monthlyIncrease = ChildLaborer::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        return response()->json([
+            'total_profiles' => $totalProfiles,
+            'active_cases' => $activeCases,
+            'withdrawn_cases' => $withdrawnCases,
+            'pending_cases' => $pendingCases,
+            'monthly_increase' => $monthlyIncrease
+        ]);
+    }
+
+    // =============================================
+    // EXISTING AUDIT METHODS
+    // =============================================
+
     public function edit($id)
     {
         $audit = Audit::findOrFail($id);
@@ -209,29 +240,5 @@ class AuditController extends Controller
         return $dataTable
             ->with('aep_ids', $aepIds)
             ->render('pages.apps.audit-management.audits.action-pages.schedule', compact('audit'));
-    }
-
-    /**
- * Get dashboard statistics (API)
- */
-    public function getDashboardStats()
-    {
-        $totalProfiles = ChildLaborer::count();
-        $activeCases = ChildLaborer::where('status', 'Active')->count();
-        $withdrawnCases = ChildLaborer::where('status', 'Withdrawn')->count();
-        $pendingCases = ChildLaborer::where('status', 'Pending')->count();
-    
-    // This month's new profiles
-        $monthlyIncrease = ChildLaborer::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
-
-        return response()->json([
-            'total_profiles' => $totalProfiles,
-            'active_cases' => $activeCases,
-            'withdrawn_cases' => $withdrawnCases,
-            'pending_cases' => $pendingCases,
-            'monthly_increase' => $monthlyIncrease
-        ]);
     }
 }
