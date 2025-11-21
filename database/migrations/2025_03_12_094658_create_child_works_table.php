@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('child_work', function (Blueprint $table) {
+        Schema::create('child_works', function (Blueprint $table) {
             $table->id();
             $table->foreignId('child_laborer_id');
             $table->enum('nature_of_work', ['Mining', 'Quarrying', 'Construction', 'Transportation', 'Fishing', 'Farming', 'Domestic', 'Manufacturing', 'Others']);

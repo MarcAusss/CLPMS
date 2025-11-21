@@ -6,29 +6,38 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('child_health', function (Blueprint $table) {
+        Schema::create('child_healths', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('child_laborer_id');
-            $table->boolean('has_disability');
-            $table->json('disability_types')->nullable();
-            $table->boolean('requires_disability_assessment');
-            $table->float('height_cm')->nullable();
-            $table->float('weight_kg')->nullable();
-            $table->json('recent_ailments')->nullable();
-            $table->boolean('requires_medical_assessment');
+            $table->foreignId('child_laborer_id')->constrained('child_laborers')->onDelete('cascade');
+            
+            // Health Measurements
+            $table->float('height_cm');
+            $table->float('weight_kg');
+            
+            // Disability Information
+            $table->boolean('has_disability')->default(false);
+            $table->json('specific_disability')->nullable();
+            $table->string('specific_disability_other')->nullable();
+            
+            // Child Ailments
+            $table->json('child_ailments')->nullable();
+            $table->string('skin_disease_specify')->nullable();
+            $table->string('allergies_specify')->nullable();
+            $table->string('other_ailments_specify')->nullable();
+            
+            // Medical Assessment
+            $table->boolean('medical_assessment')->default(false)->nullable();
+            
+            // Family Medical History
             $table->json('family_medical_history')->nullable();
+            $table->string('family_other_specify')->nullable();
+            
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('child_healths');

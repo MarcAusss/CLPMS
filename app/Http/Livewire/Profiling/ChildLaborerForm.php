@@ -106,10 +106,8 @@ public function updatedAddressRegion($value)
 {
     $this->address_province = null;
     $this->address_city = null;
-    $this->address_barangay = null;
     $this->address_provinces = [];
     $this->address_cities = [];
-    $this->address_barangays = [];
     
     if ($value) {
         $this->address_provinces = PhilippineProvince::where('region_code', $value)
@@ -123,9 +121,7 @@ public function updatedAddressRegion($value)
 public function updatedAddressProvince($value)
 {
     $this->address_city = null;
-    $this->address_barangay = null;
     $this->address_cities = [];
-    $this->address_barangays = [];
     
     if ($value) {
         $this->address_cities = PhilippineCity::where('province_code', $value)
@@ -136,30 +132,14 @@ public function updatedAddressProvince($value)
     $this->dispatchBrowserEvent('address-province-changed');
 }
 
-public function updatedAddressCity($value)
-{
-    $this->address_barangay = null;
-    $this->address_barangays = [];
-    
-    if ($value) {
-        $this->address_barangays = PhilippineBarangay::where('city_code', $value)
-            ->orderBy('name')
-            ->get()
-            ->map(function ($b) { $b->code = (string) $b->code; return $b; });
-    }
-    
-    $this->dispatchBrowserEvent('address-city-changed');
-}
 
     // BIRTH ADDRESS CASCADING
 public function updatedBirthRegion($value)
 {
     $this->birth_province = null;
     $this->birth_city = null;
-    $this->birth_barangay = null;
     $this->birth_provinces = [];
     $this->birth_cities = [];
-    $this->birth_barangays = [];
     
     if ($value) {
         $this->birth_provinces = PhilippineProvince::where('region_code', $value)
@@ -173,9 +153,7 @@ public function updatedBirthRegion($value)
 public function updatedBirthProvince($value)
 {
     $this->birth_city = null;
-    $this->birth_barangay = null;
     $this->birth_cities = [];
-    $this->birth_barangays = [];
     
     if ($value) {
         $this->birth_cities = PhilippineCity::where('province_code', $value)
@@ -186,20 +164,6 @@ public function updatedBirthProvince($value)
     $this->dispatchBrowserEvent('birth-province-changed');
 }
 
-public function updatedBirthCity($value)
-{
-    $this->birth_barangay = null;
-    $this->birth_barangays = [];
-    
-    if ($value) {
-        $this->birth_barangays = PhilippineBarangay::where('city_code', $value)
-            ->orderBy('name')
-            ->get()
-            ->map(function ($b) { $b->code = (string) $b->code; return $b; });
-    }
-    
-    $this->dispatchBrowserEvent('birth-city-changed');
-}
 
     // SIMPLE VALIDATION - NO CUSTOM RULES
     protected $rules = [
@@ -425,35 +389,28 @@ public function updatedEmployerCity($value)
     }
 }
     public function addWorkEntry()
-    {
-        $this->workEntries[] = [
-            'nature_of_work' => '',
-            'nature_of_work_other' => '',
-            'work_location' => '',
-            'work_location_other' => '',
-            'specific_tasks' => '',
-            'employer_name' => '',
-            'employer_contact' => '',
-            'work_basis' => '',
-            'work_months' => [],
-            'work_arrangement' => '',
-            'work_arrangement_other' => '',
-            'working_hours_per_day' => '',
-            'working_days_per_week' => '',
-            'work_start_time' => '',
-            'work_end_time' => '',
-            'age_started_working' => '',
-            'payment_basis' => '',
-            'exposure_risks' => [],
-            'average_monthly_income' => '',
-            'has_adult_supervisor' => '',
-            'work_supervisors' => [],
-            'work_supervisors_other' => '',
-            'supervisor_name' => '',
-            'earnings_usage' => [],
-            'earnings_usage_other' => '',
-        ];
-    }
+{
+    $this->workEntries[] = [
+        'nature_of_work' => '',
+        'work_location' => '', // This maps to employer_address
+        'age_started_working' => '',
+        'working_hours_per_day' => '',
+        'working_days_per_week' => '',
+        'work_arrangement' => '',
+        'specific_tasks' => '',
+        'employer_name' => '',
+        'employer_contact' => '',
+        'work_start_time' => '',
+        'work_end_time' => '',
+        'exposure_risks' => [],
+        'payment_basis' => '',
+        'average_monthly_income' => '',
+        'has_adult_supervisor' => 'No',
+        'work_supervisors' => [],
+        'supervisor_name' => '',
+        'earnings_usage' => [],
+    ];
+}
 
     public function removeWorkEntry($index)
     {
@@ -481,55 +438,35 @@ public function updatedEmployerCity($value)
 
     // IMPROVED toggleSameAsAddress
 public function toggleSameAsAddress()
-{
-    if ($this->same_as_address) {
-        // Copy all values including barangay text
-        $this->birth_region = $this->address_region;
-        $this->birth_province = $this->address_province;
-        $this->birth_city = $this->address_city;
-        $this->birth_barangay = $this->address_barangay; // Just copy the text
-        
-        // Load region/province/city dropdowns
-        if ($this->birth_region) {
-            $this->birth_provinces = PhilippineProvince::where('region_code', $this->birth_region)
-                ->orderBy('name')
-                ->get();
+    {
+        if ($this->same_as_address) {
+            // Copy all values including the text barangay
+            $this->birth_region = $this->address_region;
+            $this->birth_province = $this->address_province;
+            $this->birth_city = $this->address_city;
+            $this->birth_barangay = $this->address_barangay; // This is now text
+            
+            // Load dropdowns (no barangay loading needed)
+            if ($this->birth_region) {
+                $this->birth_provinces = PhilippineProvince::where('region_code', $this->birth_region)
+                    ->orderBy('name')
+                    ->get();
+            }
+            if ($this->birth_province) {
+                $this->birth_cities = PhilippineCity::where('province_code', $this->birth_province)
+                    ->orderBy('name')
+                    ->get();
+            }
+        } else {
+            // Clear everything
+            $this->birth_region = null;
+            $this->birth_province = null;
+            $this->birth_city = null;
+            $this->birth_barangay = null;
+            $this->birth_provinces = [];
+            $this->birth_cities = [];
         }
-        if ($this->birth_province) {
-            $this->birth_cities = PhilippineCity::where('province_code', $this->birth_province)
-                ->orderBy('name')
-                ->get();
-        }
-    } else {
-        // Clear everything
-        $this->birth_region = null;
-        $this->birth_province = null;
-        $this->birth_city = null;
-        $this->birth_barangay = null;
-        $this->birth_provinces = [];
-        $this->birth_cities = [];
     }
-}
-
-// ADD THIS NEW METHOD - This ensures barangay values are properly set
-public function updatedAddressBarangay($value)
-{
-    // Just log for debugging - don't modify the value
-    \Log::info('Address Barangay Updated', [
-        'value' => $value,
-        'city' => $this->address_city
-    ]);
-}
-
-public function updatedBirthBarangay($value)
-{
-    // Just log for debugging - don't modify the value
-    \Log::info('Birth Barangay Updated', [
-        'value' => $value,
-        'city' => $this->birth_city,
-        'same_as_address' => $this->same_as_address
-    ]);
-}
 
     public function updatedDateOfBirth()
     {
@@ -624,243 +561,235 @@ public function nextStep()
     }
 
     public function save()
-    {
-        try {
-            DB::beginTransaction();
-        
-            // Create Child Laborer
-            $clData = ChildLaborer::create([
-                'first_name' => $this->first_name,
-                'middle_name' => $this->middle_name,
-                'last_name' => $this->last_name,
-                'suffix' => $this->suffix,
-                'sex' => $this->sex,
-                'date_of_birth' => $this->date_of_birth,
-                'age' => $this->age,
-                'birth_certificate' => $this->birth_certificate === 'Yes' ? 1 : 0,
-                'address_region' => $this->address_region,
-                'address_province' => $this->address_province,
-                'address_city' => $this->address_city,
-                'address_barangay' => $this->address_barangay,
-                'address_sitio' => $this->address_sitio,
-                'place_of_birth' => $this->getBirthPlaceText(),
-                'religion' => $this->religion,
-                'indigenous_group' => $this->indigenous_group,
-                'living_with' => $this->living_with,
-                'dwelling_type' => $this->dwelling_type,
-                'contact_number' => $this->contact_number ?? null,
-                'is_4ps_member' => $this->is_4ps_member,
-                'house_id_number' => $this->is_4ps_member === 'Yes' ? $this->house_id_number : null,
-            ]);
-        
-            $this->cl_id = $clData->id;
-        
-            // Create Education Record
-            if ($this->has_gone_to_school) {
-                ChildEducation::create([
-                    'child_laborer_id' => $this->cl_id,
-                    'has_gone_to_school' => $this->has_gone_to_school === 'Yes' ? 1 : 0,
-                    'currently_attending' => $this->currently_attending === 'Yes' ? 1 : 0,
-                    'learner_reference_no' => $this->currently_attending === 'Yes' ? $this->learner_reference_no : null,
-                    'mode_of_education' => $this->mode_of_education,
-                    'quit_schooling' => $this->quit_schooling === 'Yes' ? 1 : 0,
-                    'highest_grade_completed' => $this->highest_grade_completed,
-                    'age_stopped_schooling' => $this->quit_schooling === 'Yes' ? $this->age_stopped_schooling : null,
-                    'reason_for_stopping' => $this->quit_schooling === 'Yes' 
-                        ? json_encode(array_merge(
-                            $this->reason_for_stopping ?? [], 
-                            $this->reason_for_stopping_other && $this->reason_for_stopping_other_text 
-                                ? [$this->reason_for_stopping_other_text] 
-                                : []
-                        )) 
-                        : null,
-                ]);
-            }
-        
-            // Create Health Record
-            if ($this->height_cm && $this->weight_kg) {
-                ChildHealth::create([
-                    'child_laborer_id' => $this->cl_id,
-                    'height_cm' => $this->height_cm,
-                    'weight_kg' => $this->weight_kg,
-                    'has_disability' => $this->has_disability === 'Yes' ? 1 : 0,
-                    'specific_disability' => $this->specific_disability ? json_encode($this->specific_disability) : null,
-                    'specific_disability_other' => $this->specific_disability_other,
-                    'child_ailments' => $this->child_ailments ? json_encode($this->child_ailments) : null,
-                    'skin_disease_specify' => $this->skin_disease_specify,
-                    'allergies_specify' => $this->allergies_specify,
-                    'other_ailments_specify' => $this->other_ailments_specify,
-                    'medical_assessment' => $this->medical_assessment === 'Yes' ? 1 : 0,
-                    'family_medical_history' => $this->family_medical_history ? json_encode($this->family_medical_history) : null,
-                    'family_other_specify' => $this->family_other_specify,
-                ]);
-            }
-        
-            // Create Work Entries
-            foreach ($this->workEntries as $entry) {
-                ChildWork::create([
-                    'child_laborer_id' => $this->cl_id,
-                    'nature_of_work' => $entry['nature_of_work'],
-                    'nature_of_work_other' => $entry['nature_of_work_other'] ?? null,
-                    'work_location' => $entry['work_location'],
-                    'work_location_other' => $entry['work_location_other'] ?? null,
-                    'specific_tasks' => $entry['specific_tasks'] ?? null,
-                    'employer_name' => $entry['employer_name'] ?? null,
-                    'employer_contact' => $entry['employer_contact'] ?? null,
-                    'work_basis' => $entry['work_basis'],
-                    'work_months' => isset($entry['work_months']) ? json_encode($entry['work_months']) : null,
-                    'employer_region' => $this->employer_region ?? null,
-                    'employer_province' => $this->employer_province ?? null,
-                    'employer_city' => $this->employer_city ?? null,
-                    'employer_barangay' => $this->employer_barangay ?? null,
-                    'work_arrangement' => $entry['work_arrangement'],
-                    'work_arrangement_other' => $entry['work_arrangement_other'] ?? null,
-                    'working_hours_per_day' => $entry['working_hours_per_day'] ?? null,
-                    'working_days_per_week' => $entry['working_days_per_week'] ?? null,
-                    'work_start_time' => $entry['work_start_time'] ?? null,
-                    'work_end_time' => $entry['work_end_time'] ?? null,
-                    'age_started_working' => $entry['age_started_working'],
-                    'payment_basis' => $entry['payment_basis'] ?? null,
-                    'exposure_risks' => isset($entry['exposure_risks']) ? json_encode($entry['exposure_risks']) : null,
-                    'average_monthly_income' => $entry['average_monthly_income'] ?? null,
-                    'has_adult_supervisor' => $entry['has_adult_supervisor'] === 'Yes' ? 1 : 0,
-                    'work_supervisors' => isset($entry['work_supervisors']) ? json_encode($entry['work_supervisors']) : null,
-                    'work_supervisors_other' => $entry['work_supervisors_other'] ?? null,
-                    'supervisor_name' => $entry['supervisor_name'] ?? null,
-                    'earnings_usage' => isset($entry['earnings_usage']) ? json_encode($entry['earnings_usage']) : null,
-                    'earnings_usage_other' => $entry['earnings_usage_other'] ?? null,
-                ]);
-            }
-        
-            // Create Family Members
-            foreach ($this->family_members as $member) {
-                FamilyMember::create([
-                    'child_laborer_id' => $clData->id,
-                    'full_name' => $member['name'],
-                    'relationship' => $member['relationship'],
-                    'sex' => $member['sex'],
-                    'age' => $member['age'],
-                    'civil_status' => $member['civil_status'],
-                    'education' => $member['education'] ?? null,
-                    'solo_parent' => $member['solo_parent'] ?? null,
-                    'occupation' => $member['occupation'] ?? null,
-                    'income' => $member['income'] ?? null,
-                    'disability' => $member['disability'] ?? null,
-                    'skills' => $member['skills'] ?? null,
-                    'whereabouts' => $member['whereabouts'] ?? null,
-                ]);
-            }
-        
-            // Create Services Availed
-            foreach ($this->services_availed as $service) {
-                AssistanceRecord::create([
-                    'child_laborer_id' => $this->cl_id,
-                    'type_of_assistance' => $service['assistance'] ?? null,
-                    'source' => $service['source'] ?? null,
-                    'date_provided' => $service['year'] ?? null,
-                    'family_member_recieved' => $service['members'] ?? null,
-                    'remarks' => $service['remarks'] ?? null,
-                ]);
-            }
-        
-            // Create Services Requested
-            foreach ($this->services_requested as $service) {
-                RequestedService::create([
-                    'child_laborer_id' => $this->cl_id,
-                    'type_of_assistance' => $service['assistance'] ?? null,
-                    'source' => $service['source'] ?? null,
-                    'start_date' => $service['start_date'] ?? null,
-                    'end_date' => $service['end_date'] ?? null,
-                    'family_member_requested' => $service['members'] ?? null,
-                    'remarks' => $service['remarks'] ?? null,
-                ]);
-            }
-        
-            DB::commit();
-            
-            // Reset form and show success
-            $this->resetForm();
-            $this->dispatchBrowserEvent('close-modal');
-            $this->dispatchBrowserEvent('swal:modal', [
-                'title' => 'Success!',
-                'text' => 'Child Laborer Profile Saved Successfully.',
-                'icon' => 'success',
-                'timer' => 3000,
-                'showConfirmButton' => false,
-            ]);
-            
-            $this->emit('childLaborerAdded');
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Error saving child laborer: ' . $e->getMessage());
-            $this->dispatchBrowserEvent('swal:modal', [
-                'title' => 'Error!',
-                'text' => 'An error occurred while saving the profile: ' . $e->getMessage(),
-                'icon' => 'error',
+{
+    try {
+        DB::beginTransaction();
+    
+        // Create Child Laborer
+        $clData = ChildLaborer::create([
+            'first_name' => $this->first_name,
+            'middle_name' => $this->middle_name,
+            'last_name' => $this->last_name,
+            'suffix' => $this->suffix,
+            'sex' => $this->sex,
+            'date_of_birth' => $this->date_of_birth,
+            'age' => $this->age,
+            'birth_certificate' => $this->birth_certificate === 'Yes' ? 1 : 0,
+            'address_region' => $this->address_region,
+            'address_province' => $this->address_province,
+            'address_city' => $this->address_city,
+            'address_barangay' => $this->address_barangay,
+            'address_sitio' => $this->address_sitio,
+            'place_of_birth' => $this->getBirthPlaceText(),
+            'religion' => $this->religion,
+            'indigenous_group' => $this->indigenous_group,
+            'living_with' => $this->living_with,
+            'dwelling_type' => $this->dwelling_type,
+            'contact_number' => $this->contact_number ?? null,
+            'is_4ps_member' => $this->is_4ps_member,
+            'house_id_number' => $this->is_4ps_member === 'Yes' ? $this->house_id_number : null,
+        ]);
+    
+        $this->cl_id = $clData->id;
+    
+        // Create Education Record
+        if ($this->has_gone_to_school) {
+            ChildEducation::create([
+                'child_laborer_id' => $this->cl_id,
+                'has_gone_to_school' => $this->has_gone_to_school === 'Yes' ? 1 : 0,
+                'currently_attending' => $this->currently_attending === 'Yes' ? 1 : 0,
+                'learner_reference_no' => $this->currently_attending === 'Yes' ? $this->learner_reference_no : null,
+                'mode_of_education' => $this->mode_of_education,
+                'quit_schooling' => $this->quit_schooling === 'Yes' ? 1 : 0,
+                'highest_grade_completed' => $this->highest_grade_completed,
+                'age_stopped_schooling' => $this->quit_schooling === 'Yes' ? $this->age_stopped_schooling : null,
+                'reason_for_stopping' => $this->quit_schooling === 'Yes' 
+                    ? json_encode(array_merge(
+                        $this->reason_for_stopping ?? [], 
+                        $this->reason_for_stopping_other && $this->reason_for_stopping_other_text 
+                            ? [$this->reason_for_stopping_other_text] 
+                            : []
+                    )) 
+                    : null,
             ]);
         }
+    
+        // Create Health Record
+        if ($this->height_cm && $this->weight_kg) {
+            ChildHealth::create([
+                'child_laborer_id' => $this->cl_id,
+                'height_cm' => $this->height_cm,
+                'weight_kg' => $this->weight_kg,
+                'has_disability' => $this->has_disability === 'Yes' ? 1 : 0,
+                'specific_disability' => $this->specific_disability ? json_encode($this->specific_disability) : null,
+                'specific_disability_other' => $this->specific_disability_other,
+                'child_ailments' => $this->child_ailments ? json_encode($this->child_ailments) : null,
+                'skin_disease_specify' => $this->skin_disease_specify,
+                'allergies_specify' => $this->allergies_specify,
+                'other_ailments_specify' => $this->other_ailments_specify,
+                'medical_assessment' => $this->medical_assessment === 'Yes' ? 1 : 0,
+                'family_medical_history' => $this->family_medical_history ? json_encode($this->family_medical_history) : null,
+                'family_other_specify' => $this->family_other_specify,
+            ]);
+        }
+    
+        // Create Work Entries - CORRECTED MAPPING
+foreach ($this->workEntries as $entry) {
+    ChildWork::create([
+        'child_laborer_id' => $this->cl_id,
+        'nature_of_work' => $entry['nature_of_work'] ?? null,
+        'specific_tasks' => isset($entry['specific_tasks']) ? json_encode([$entry['specific_tasks']]) : null,
+        'employer_name' => $entry['employer_name'] ?? null,
+        'employer_contact' => $entry['employer_contact'] ?? null,
+        'employer_address' => $entry['work_location'] ?? null, // Map work_location to employer_address
+        'work_arrangement' => $entry['work_arrangement'] ?? null,
+        'working_hours_per_day' => $entry['working_hours_per_day'] ?? null,
+        'working_days_per_week' => $entry['working_days_per_week'] ?? null,
+        'work_start_time' => $entry['work_start_time'] ?? null,
+        'work_end_time' => $entry['work_end_time'] ?? null,
+        'age_started_working' => $entry['age_started_working'] ?? null,
+        'exposure_risks' => isset($entry['exposure_risks']) ? json_encode($entry['exposure_risks']) : null,
+        'payment_basis' => isset($entry['payment_basis']) ? json_encode([$entry['payment_basis']]) : null,
+        'average_monthly_income' => $entry['average_monthly_income'] ?? null,
+        'earnings_usage' => isset($entry['earnings_usage']) ? json_encode($entry['earnings_usage']) : null,
+        'has_adult_supervisor' => isset($entry['has_adult_supervisor']) && $entry['has_adult_supervisor'] === 'Yes' ? 1 : 0,
+        'supervisor_name' => $entry['supervisor_name'] ?? null,
+        'supervisor_relationship' => $entry['work_supervisors'][0] ?? null, // Map first supervisor to relationship
+    ]);
+}
+    
+        // Create Family Members
+        foreach ($this->family_members as $member) {
+            FamilyMember::create([
+                'child_laborer_id' => $clData->id,
+                'full_name' => $member['name'] ?? null,
+                'relationship' => $member['relationship'] ?? null,
+                'sex' => $member['sex'] ?? null,
+                'age' => $member['age'] ?? null,
+                'civil_status' => $member['civil_status'] ?? null,
+                'education' => $member['education'] ?? null,
+                'solo_parent' => $member['solo_parent'] ?? null,
+                'occupation' => $member['occupation'] ?? null,
+                'income' => $member['income'] ?? null,
+                'disability' => $member['disability'] ?? null,
+                'skills' => $member['skills'] ?? null,
+                'whereabouts' => $member['whereabouts'] ?? null,
+            ]);
+        }
+    
+        // Create Services Availed
+        foreach ($this->services_availed as $service) {
+            AssistanceRecord::create([
+                'child_laborer_id' => $this->cl_id,
+                'type_of_assistance' => $service['assistance'] ?? null,
+                'source' => $service['source'] ?? null,
+                'date_provided' => $service['year'] ?? null,
+                'family_member_recieved' => $service['members'] ?? null,
+                'remarks' => $service['remarks'] ?? null,
+            ]);
+        }
+    
+        // Create Services Requested
+        foreach ($this->services_requested as $service) {
+            RequestedService::create([
+                'child_laborer_id' => $this->cl_id,
+                'type_of_assistance' => $service['assistance'] ?? null,
+                'source' => $service['source'] ?? null,
+                'start_date' => $service['start_date'] ?? null,
+                'end_date' => $service['end_date'] ?? null,
+                'family_member_requested' => $service['members'] ?? null,
+                'remarks' => $service['remarks'] ?? null,
+            ]);
+        }
+    
+        DB::commit();
+        
+        // Reset form and show success
+        $this->resetForm();
+        $this->dispatchBrowserEvent('close-modal');
+        $this->dispatchBrowserEvent('swal:modal', [
+            'title' => 'Success!',
+            'text' => 'Child Laborer Profile Saved Successfully.',
+            'icon' => 'success',
+            'timer' => 3000,
+            'showConfirmButton' => false,
+        ]);
+        
+        $this->emit('childLaborerAdded');
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error saving child laborer: ' . $e->getMessage());
+        \Log::error('Work Entries Data:', $this->workEntries); // Log work entries for debugging
+        $this->dispatchBrowserEvent('swal:modal', [
+            'title' => 'Error!',
+            'text' => 'An error occurred while saving the profile: ' . $e->getMessage(),
+            'icon' => 'error',
+        ]);
     }
+}
 
     private function getBirthPlaceText()
-{
-    if ($this->same_as_address) {
-        return $this->getAddressText();
+    {
+        if ($this->same_as_address) {
+            return $this->getAddressText();
+        }
+        
+        $parts = [];
+        
+        // Just use the text values directly - no database queries needed
+        if ($this->birth_barangay) {
+            $parts[] = 'Brgy. ' . $this->birth_barangay;
+        }
+        
+        if ($this->birth_city) {
+            $city = PhilippineCity::where('city_code', $this->birth_city)->first();
+            if ($city) $parts[] = $city->name;
+        }
+        
+        if ($this->birth_province) {
+            $province = PhilippineProvince::where('province_code', $this->birth_province)->first();
+            if ($province) $parts[] = $province->name;
+        }
+        
+        if ($this->birth_region) {
+            $region = PhilippineRegion::where('region_code', $this->birth_region)->first();
+            if ($region) $parts[] = $region->name;
+        }
+        
+        return implode(', ', $parts);
     }
-    
-    $parts = [];
-    
-    if ($this->birth_barangay) {
-        $parts[] = 'Brgy. ' . $this->birth_barangay;
-    }
-    
-    if ($this->birth_city) {
-        $city = PhilippineCity::where('city_code', $this->birth_city)->first();
-        if ($city) $parts[] = $city->name;
-    }
-    
-    if ($this->birth_province) {
-        $province = PhilippineProvince::where('province_code', $this->birth_province)->first();
-        if ($province) $parts[] = $province->name;
-    }
-    
-    if ($this->birth_region) {
-        $region = PhilippineRegion::where('region_code', $this->birth_region)->first();
-        if ($region) $parts[] = $region->name;
-    }
-    
-    return implode(', ', $parts);
-}
 
-private function getAddressText()
-{
-    $parts = [];
-    
-    if ($this->address_sitio) {
-        $parts[] = $this->address_sitio;
+    private function getAddressText()
+    {
+        $parts = [];
+        
+        if ($this->address_sitio) {
+            $parts[] = $this->address_sitio;
+        }
+        
+        // Just use the text values directly - no database queries needed
+        if ($this->address_barangay) {
+            $parts[] = 'Brgy. ' . $this->address_barangay;
+        }
+        
+        if ($this->address_city) {
+            $city = PhilippineCity::where('city_code', $this->address_city)->first();
+            if ($city) $parts[] = $city->name;
+        }
+        
+        if ($this->address_province) {
+            $province = PhilippineProvince::where('province_code', $this->address_province)->first();
+            if ($province) $parts[] = $province->name;
+        }
+        
+        if ($this->address_region) {
+            $region = PhilippineRegion::where('region_code', $this->address_region)->first();
+            if ($region) $parts[] = $region->name;
+        }
+        
+        return implode(', ', $parts);
     }
-    
-    if ($this->address_barangay) {
-        $parts[] = 'Brgy. ' . $this->address_barangay;
-    }
-    
-    if ($this->address_city) {
-        $city = PhilippineCity::where('city_code', $this->address_city)->first();
-        if ($city) $parts[] = $city->name;
-    }
-    
-    if ($this->address_province) {
-        $province = PhilippineProvince::where('province_code', $this->address_province)->first();
-        if ($province) $parts[] = $province->name;
-    }
-    
-    if ($this->address_region) {
-        $region = PhilippineRegion::where('region_code', $this->address_region)->first();
-        if ($region) $parts[] = $region->name;
-    }
-    
-    return implode(', ', $parts);
-}
 
     private function resetForm()
     {
