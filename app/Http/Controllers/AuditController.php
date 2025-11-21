@@ -2,243 +2,318 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Audit;
-use App\Models\AuditExecution;
-use App\DataTables\ScheduleAuditsDataTable;
-use App\DataTables\AuditsDataTable;
-use Illuminate\Support\Facades\Log;
-use App\Models\AuditEngagementPlan;
 use App\Models\ChildLaborer;
-use App\Models\Province;
-use App\Models\Barangay;
+use App\Models\PhilippineProvince;
+use App\Models\PhilippineCity;
+use App\Models\PhilippineBarangay;
 use Illuminate\Http\Request;
-use Yajra\DataTables\DataTables;
+use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\DB;
 
 class AuditController extends Controller
 {
-    // =============================================
-    // CL PROFILING METHODS
-    // =============================================
-
     /**
-     * Display CL Profiling main page with DataTable
+     * Display the CL Profiling index page
      */
-    public function index(AuditsDataTable $dataTable)
+    public function index()
     {
-        return $dataTable->render('pages.apps.audit-management.audits.list');
+        return view('pages.cl-profiling.index');
     }
 
     /**
-     * DataTable server-side processing for CL Profiling
+     * Get DataTables data for Child Laborers
      */
     public function dataTable(Request $request)
     {
-        $childLaborers = ChildLaborer::with(['barangay.province'])
-            ->select('child_laborers.*');
+        if ($request->ajax()) {
+            $query = ChildLaborer::query()
+                ->leftJoin('philippine_provinces', 'child_laborers.address_province', '=', 'philippine_provinces.province_code')
+                ->leftJoin('philippine_cities', 'child_laborers.address_city', '=', 'philippine_cities.city_code')
+                ->select([
+                    'child_laborers.*',
+                    'philippine_provinces.name as province_name',
+                    'philippine_cities.name as city_name'
+                ]);
 
-        return DataTables::of($childLaborers)
-            ->addColumn('full_name', function (ChildLaborer $cl) {
-                return $cl->last_name . ', ' . $cl->first_name . ' ' . $cl->middle_name;
-            })
-            ->addColumn('birth_date', function (ChildLaborer $cl) {
-                return $cl->date_of_birth ? \Carbon\Carbon::parse($cl->date_of_birth)->format('M j, Y') : '';
-            })
-            ->addColumn('province', function (ChildLaborer $cl) {
-                return $cl->barangay->province->name ?? 'N/A';
-            })
-            ->addColumn('status', function (ChildLaborer $cl) {
-                return $cl->status ?? 'Active';
-            })
-            ->addColumn('action', function (ChildLaborer $cl) {
-                return view('pages.apps.audit-management.audits.columns._actions', compact('cl'))->render();
-            })
-            ->filterColumn('full_name', function($query, $keyword) {
-                $query->whereRaw("CONCAT(last_name, ', ', first_name, ' ', middle_name) like ?", ["%{$keyword}%"]);
-            })
-            ->rawColumns(['action'])
-            ->make(true);
+            return DataTables::eloquent($query)
+                ->addColumn('full_name', function ($laborer) {
+                    $fullName = trim($laborer->first_name . ' ' . 
+                                    ($laborer->middle_name ? $laborer->middle_name . ' ' : '') . 
+                                    $laborer->last_name . 
+                                    ($laborer->suffix ? ' ' . $laborer->suffix : ''));
+                    return $fullName;
+                })
+                ->addColumn('birth_date', function ($laborer) {
+                    return $laborer->date_of_birth 
+                        ? \Carbon\Carbon::parse($laborer->date_of_birth)->format('M d, Y') 
+                        : 'N/A';
+                })
+                ->addColumn('province', function ($laborer) {
+                    // Key fix: Handle null province gracefully
+                    return $laborer->province_name ?? 'N/A';
+                })
+                ->addColumn('status', function ($laborer) {
+                    // Default status - you can add a status column to your table if needed
+                    return 'Active';
+                })
+                ->addColumn('action', function ($laborer) {
+                    return '<div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-primary action-btn view-btn" data-id="' . $laborer->id . '" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary action-btn edit-btn" data-id="' . $laborer->id . '" title="Edit Record">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-btn" data-id="' . $laborer->id . '" title="Delete Record">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>';
+                })
+                ->rawColumns(['action'])
+                ->make(true);
+        }
+
+        return response()->json(['error' => 'Invalid request'], 400);
     }
 
     /**
-     * Show single CL record for quick view modal (API)
+     * Get single child laborer for viewing
      */
     public function show($id)
     {
-        $childLaborer = ChildLaborer::with([
-            'barangay.province',
-            'education',
-            'health', 
-            'work',
-            'requested_services',
-            'availed_services',
-            'family_members'
-        ])->findOrFail($id);
-        
-        return response()->json($childLaborer);
+        try {
+            $laborer = ChildLaborer::query()
+                ->leftJoin('philippine_provinces', 'child_laborers.address_province', '=', 'philippine_provinces.province_code')
+                ->leftJoin('philippine_cities', 'child_laborers.address_city', '=', 'philippine_cities.city_code')
+                ->select([
+                    'child_laborers.*',
+                    'philippine_provinces.name as province_name',
+                    'philippine_cities.name as city_name'
+                ])
+                ->where('child_laborers.id', $id)
+                ->firstOrFail();
+
+            return response()->json([
+                'id' => $laborer->id,
+                'first_name' => $laborer->first_name,
+                'middle_name' => $laborer->middle_name,
+                'last_name' => $laborer->last_name,
+                'suffix' => $laborer->suffix,
+                'sex' => $laborer->sex,
+                'date_of_birth' => $laborer->date_of_birth,
+                'age' => $laborer->age,
+                'province' => $laborer->province_name ?? 'N/A',
+                'city' => $laborer->city_name ?? 'N/A',
+                'barangay' => $laborer->address_barangay ?? 'N/A',
+                'address' => $this->formatAddress($laborer),
+                'status' => 'Active',
+                'birth_certificate' => $laborer->birth_certificate ? 'Yes' : 'No',
+                'religion' => $laborer->religion,
+                'indigenous_group' => $laborer->indigenous_group,
+                'living_with' => $laborer->living_with,
+                'dwelling_type' => $laborer->dwelling_type,
+                'contact_number' => $laborer->contact_number,
+                'is_4ps_member' => $laborer->is_4ps_member,
+                'house_id_number' => $laborer->house_id_number,
+                'notes' => null // Add this field to your table if you need it
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Record not found',
+                'message' => $e->getMessage()
+            ], 404);
+        }
     }
 
     /**
-     * Get CL record for editing
+     * Get child laborer data for editing
      */
     public function editCl($id)
     {
-        $childLaborer = ChildLaborer::with(['barangay.province'])->findOrFail($id);
-        return response()->json($childLaborer);
+        try {
+            $laborer = ChildLaborer::with([
+                'education',
+                'health',
+                'workHistory',
+                'familyMembers',
+                'assistanceRecords',
+                'requestedServices'
+            ])->findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $laborer
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Record not found'
+            ], 404);
+        }
     }
 
     /**
-     * Update CL record (API)
+     * Update child laborer record
      */
     public function updateCl(Request $request, $id)
     {
-        $childLaborer = ChildLaborer::findOrFail($id);
-        
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'sex' => 'required|in:Male,Female',
-            'date_of_birth' => 'required|date',
-            'age' => 'required|integer|min:0',
-            'barangay_id' => 'required|exists:barangays,id',
-            'contact_number' => 'nullable|string|max:20',
-            'guardian_name' => 'nullable|string|max:255',
-            'address' => 'nullable|string',
-            'education_level' => 'nullable|string|max:255',
-            'work_type' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
-            'status' => 'required|in:Active,Inactive,Pending'
-        ]);
+        try {
+            DB::beginTransaction();
 
-        $childLaborer->update($validated);
+            $laborer = ChildLaborer::findOrFail($id);
+            
+            // Update basic info
+            $laborer->update($request->only([
+                'first_name', 'middle_name', 'last_name', 'suffix',
+                'sex', 'date_of_birth', 'age', 'birth_certificate',
+                'address_region', 'address_province', 'address_city',
+                'address_barangay', 'address_sitio', 'place_of_birth',
+                'religion', 'religion_other', 'indigenous_group',
+                'indigenous_group_spec', 'living_with', 'dwelling_type',
+                'contact_number', 'is_4ps_member', 'house_id_number'
+            ]));
 
-        return response()->json([
-            'success' => true,
-            'message' => 'CL record updated successfully'
-        ]);
+            // Update related records (education, health, work, family, etc.)
+            // Add your update logic here
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Record updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating record: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Delete CL record (API)
+     * Delete a child laborer record
      */
     public function destroyCl($id)
     {
-        $childLaborer = ChildLaborer::findOrFail($id);
-        $childLaborer->delete();
+        try {
+            DB::beginTransaction();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'CL record deleted successfully'
-        ]);
+            $laborer = ChildLaborer::findOrFail($id);
+            
+            // Delete related records (cascade)
+            $laborer->education()->delete();
+            $laborer->health()->delete();
+            $laborer->workHistory()->delete();
+            $laborer->familyMembers()->delete();
+            $laborer->assistanceRecords()->delete();
+            $laborer->requestedServices()->delete();
+            
+            // Delete main record
+            $laborer->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Record deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting record: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * Get provinces for dropdown (API)
+     * Get dashboard statistics
      */
-    public function getProvinces()
+    public function getDashboardStats()
     {
-        $provinces = Province::orderBy('name')->get();
+        try {
+            $stats = [
+                'total_child_laborers' => ChildLaborer::count(),
+                'male_count' => ChildLaborer::where('sex', 'Male')->count(),
+                'female_count' => ChildLaborer::where('sex', 'Female')->count(),
+                'with_disability' => \App\Models\ChildHealth::where('has_disability', 1)->count(),
+                'in_school' => \App\Models\ChildEducation::where('currently_attending', 1)->count(),
+                'out_of_school' => \App\Models\ChildEducation::where('currently_attending', 0)->count(),
+                '4ps_members' => ChildLaborer::where('is_4ps_member', 'Yes')->count(),
+            ];
+
+            return response()->json($stats);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error fetching statistics',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get provinces for dropdowns
+     */
+    public function getProvinces(Request $request)
+    {
+        $regionCode = $request->get('region_code');
+        
+        $query = PhilippineProvince::query();
+        
+        if ($regionCode) {
+            $query->where('region_code', $regionCode);
+        }
+        
+        $provinces = $query->orderBy('name')->get();
+        
         return response()->json($provinces);
     }
 
     /**
-     * Get barangays by province (API)
+     * Get barangays by province
      */
     public function getBarangaysByProvince(Request $request)
     {
-        $barangays = Barangay::where('province_id', $request->province_id)
-            ->orderBy('name')
-            ->get();
+        $provinceCode = $request->get('province_code');
+        $cityCode = $request->get('city_code');
+        
+        $query = PhilippineBarangay::query();
+        
+        if ($cityCode) {
+            $query->where('city_code', $cityCode);
+        } elseif ($provinceCode) {
+            $query->where('province_code', $provinceCode);
+        }
+        
+        $barangays = $query->orderBy('name')->get();
+        
         return response()->json($barangays);
     }
 
     /**
-     * Get dashboard statistics (API)
+     * Format complete address
      */
-    public function getDashboardStats()
+    private function formatAddress($laborer)
     {
-        $totalProfiles = ChildLaborer::count();
-        $activeCases = ChildLaborer::where('status', 'Active')->count();
-        $withdrawnCases = ChildLaborer::where('status', 'Withdrawn')->count();
-        $pendingCases = ChildLaborer::where('status', 'Pending')->count();
+        $parts = [];
         
-        // This month's new profiles
-        $monthlyIncrease = ChildLaborer::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
-
-        return response()->json([
-            'total_profiles' => $totalProfiles,
-            'active_cases' => $activeCases,
-            'withdrawn_cases' => $withdrawnCases,
-            'pending_cases' => $pendingCases,
-            'monthly_increase' => $monthlyIncrease
-        ]);
-    }
-
-    // =============================================
-    // EXISTING AUDIT METHODS
-    // =============================================
-
-    public function edit($id)
-    {
-        $audit = Audit::findOrFail($id);
-        return view('pages.apps.audit-management.audits.action-pages.edit', compact('audit'));
-    }
-
-    public function evaluate($id)
-    {
-        $audit = Audit::with([
-            'auditScopes',
-            'auditObjectives',
-            'auditMethods',
-            'auditCriteria',
-            'auditResourceReferences',
-            'auditEngagementPlans',
-            'auditEngagementPlans.specifics',
-            'auditBudgets',
-            'auditEquipments',
-            'auditTeams'
-        ])->findOrFail($id);
-
-        return view('pages.apps.audit-management.audits.action-pages.eval', compact('audit'));
-    }
-
-    public function review($id)
-    {
-        $audit = Audit::findOrFail($id);
-        return view('pages.apps.audit-management.audits.action-pages.review', compact('audit'));
-    }
-
-    public function view($id)
-    {
-        $cl = ChildLaborer::with([
-            'education',
-            'health',
-            'work',
-            'requested_services',
-            'availed_services',
-            'family_members',
-            'barangay.city.province.region',
-            'Bbarangay.Bcity.Bprovince.Bregion'
-        ])->findOrFail($id);
-
-        return view('pages.apps.audit-management.audits.show', compact('cl'));
-    }
-
-    public function schedule(ScheduleAuditsDataTable $dataTable, $id)
-    {
-        $audit = Audit::findOrFail($id);
-
-        $auditExecutions = AuditEngagementPlan::with(['specifics'])
-            ->where('fk_audit', $audit->a_id) 
-            ->where('aep_section', 'Audit Execution')
-            ->get();
-
-        $aepIds = $auditExecutions->pluck('aep_id');
-
-        return $dataTable
-            ->with('aep_ids', $aepIds)
-            ->render('pages.apps.audit-management.audits.action-pages.schedule', compact('audit'));
+        if ($laborer->address_sitio) {
+            $parts[] = $laborer->address_sitio;
+        }
+        
+        if ($laborer->address_barangay) {
+            $parts[] = 'Brgy. ' . $laborer->address_barangay;
+        }
+        
+        if (isset($laborer->city_name)) {
+            $parts[] = $laborer->city_name;
+        }
+        
+        if (isset($laborer->province_name)) {
+            $parts[] = $laborer->province_name;
+        }
+        
+        return !empty($parts) ? implode(', ', $parts) : 'N/A';
     }
 }

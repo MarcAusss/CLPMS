@@ -133,12 +133,12 @@
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Supervisor Relationship</label>
                     <select wire:model="workEntries.{{ $index }}.work_supervisors" class="form-select">
-                        <option value="">Select Relationship</option>
-                        <option value="Parent/Guardian">Parent/Guardian</option>
-                        <option value="Elder Sibling">Elder Sibling</option>
-                        <option value="Employer">Employer</option>
-                        <option value="Others">Others</option>
-                    </select>
+                    <option value="">Select Relationship</option>
+                    <option value="Parent/Guardian">Parent/Guardian</option>
+                    <option value="Elder Sibling">Elder Sibling</option>
+                    <option value="Employer">Employer</option>
+                    <option value="Others">Others</option>
+                </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Earnings Usage</label>

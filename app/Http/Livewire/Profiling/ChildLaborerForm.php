@@ -99,6 +99,11 @@ class ChildLaborerForm extends Component
         $this->employer_regions = PhilippineRegion::all();
         $this->address_regions = PhilippineRegion::all();
         $this->birth_regions = PhilippineRegion::all();
+
+        // Initialize with one empty work entry
+    if (empty($this->workEntries)) {
+        $this->addWorkEntry();
+    }
     }
 
     // HOME ADDRESS CASCADING
@@ -233,34 +238,31 @@ public function updatedBirthProvince($value)
             'family_medical_history.*' => 'string|in:Hypertension,Diabetes,Asthma,Kidney Ailment,Liver Ailment,Heart Ailment,Cancer,Paralysis,Respiratory Illness,Others,None',
             'family_other_specify' => 'required_if:family_medical_history.*,Others|string|nullable',
         ],
-        4 => [
             // Relaxed to match current UI in step4.blade.php
+         4 => [
+            'workEntries' => 'required|array|min:1', // Ensure at least one work entry exists
             'workEntries.*.nature_of_work' => 'required|string',
-            'workEntries.*.work_location' => 'required|string',
+            'workEntries.*.work_location' => 'required|string', // This is the employer_address
             'workEntries.*.age_started_working' => 'required|numeric|min:1|max:99',
             'workEntries.*.working_hours_per_day' => 'required|numeric|min:1|max:24',
-            // Other fields optional until UI is completed
+            'workEntries.*.working_days_per_week' => 'nullable|numeric|min:1|max:7',
+    
+        // Make all other fields nullable since they're optional in your form
             'workEntries.*.nature_of_work_other' => 'nullable|string',
             'workEntries.*.work_location_other' => 'nullable|string',
             'workEntries.*.specific_tasks' => 'nullable|string',
             'workEntries.*.employer_name' => 'nullable|string',
             'workEntries.*.employer_contact' => 'nullable|string',
-            'workEntries.*.work_basis' => 'nullable|string',
-            'workEntries.*.work_months' => 'nullable|array',
             'workEntries.*.work_arrangement' => 'nullable|string',
-            'workEntries.*.work_arrangement_other' => 'nullable|string',
-            'workEntries.*.working_days_per_week' => 'nullable|numeric|min:1|max:7',
             'workEntries.*.work_start_time' => 'nullable|date_format:H:i',
-            'workEntries.*.work_end_time' => 'nullable|date_format:H:i',
+            'workEntries.*.work_end_time' => 'nullable|date_format:H:i|after:workEntries.*.work_start_time',
             'workEntries.*.payment_basis' => 'nullable|string',
-            'workEntries.*.exposure_risks' => 'nullable|array',
             'workEntries.*.average_monthly_income' => 'nullable|numeric|min:0',
             'workEntries.*.has_adult_supervisor' => 'nullable|string|in:Yes,No',
-            'workEntries.*.work_supervisors' => 'nullable|array',
-            'workEntries.*.work_supervisors_other' => 'nullable|string',
             'workEntries.*.supervisor_name' => 'nullable|string',
-            'workEntries.*.earnings_usage' => 'nullable|array',
-            'workEntries.*.earnings_usage_other' => 'nullable|string',
+            'workEntries.*.work_supervisors' => 'nullable|string', // Changed from array to string
+            'workEntries.*.earnings_usage' => 'nullable|string', // Changed from array to string
+            'workEntries.*.exposure_risks' => 'nullable|string', // Changed from array to string
         ],
         5 => [
             'is_4ps_member' => 'required',
@@ -654,7 +656,7 @@ foreach ($this->workEntries as $entry) {
         'earnings_usage' => isset($entry['earnings_usage']) ? json_encode($entry['earnings_usage']) : null,
         'has_adult_supervisor' => isset($entry['has_adult_supervisor']) && $entry['has_adult_supervisor'] === 'Yes' ? 1 : 0,
         'supervisor_name' => $entry['supervisor_name'] ?? null,
-        'supervisor_relationship' => $entry['work_supervisors'][0] ?? null, // Map first supervisor to relationship
+        'supervisor_relationship' => $entry['work_supervisors'] ?? null, // Map first supervisor to relationship
     ]);
 }
     
