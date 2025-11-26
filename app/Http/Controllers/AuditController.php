@@ -454,7 +454,7 @@ class AuditController extends Controller
 
     /**
      * Format complete address
-     */
+     */ 
     private function formatAddress($laborer)
     {
         $parts = [];
@@ -481,4 +481,4 @@ class AuditController extends Controller
         
         return !empty($parts) ? implode(', ', $parts) : 'N/A';
     }
-} 
+}  
